@@ -10,8 +10,8 @@ const TRUSTED_SETUP: &str = include_str!("trusted_setup.txt");
 #[derive(Debug, Default)]
 pub struct KzgSettings {
     roots_of_unity: Scalar,
-    g1_values: Vec<G1Affine>,
-    g2_values: Vec<G2Affine>,
+    pub(crate) g1_values: Vec<G1Affine>,
+    pub(crate) g2_values: Vec<G2Affine>,
 }
 
 pub fn load_trusted_setup_file() -> Result<KzgSettings, KzgError> {
