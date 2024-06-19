@@ -11,6 +11,33 @@ pub mod enums;
 pub mod test_format;
 pub mod trusted_setup;
 
+fn safe_g1_affine_from_bytes(bytes: Bytes48) -> Result<G1Affine, KzgError> {
+    let g1 = G1Affine::from_compressed(&bytes.into());
+    if g1.is_none().into() {
+        return Err(KzgError::BadArgs(
+            "Failed to parse G1Affine from bytes".to_string(),
+        ));
+    }
+    Ok(g1.unwrap())
+}
+
+fn safe_scalar_affine_from_bytes(bytes: Bytes32) -> Result<Scalar, KzgError> {
+    let lendian: [u8; 32] = Into::<[u8; 32]>::into(bytes)
+        .iter()
+        .rev()
+        .map(|&x| x)
+        .collect::<Vec<u8>>()
+        .try_into()
+        .unwrap();
+    let scalar = Scalar::from_bytes(&lendian);
+    if scalar.is_none().into() {
+        return Err(KzgError::BadArgs(
+            "Failed to parse G1Affine from bytes".to_string(),
+        ));
+    }
+    Ok(scalar.unwrap())
+}
+
 pub fn verify_kzg_proof(
     commitment_bytes: Bytes48,
     z_bytes: Bytes32,
@@ -18,24 +45,30 @@ pub fn verify_kzg_proof(
     proof_bytes: Bytes48,
     kzg_settings: KzgSettings,
 ) -> bool {
-    let commitment = G1Affine::from_compressed(&commitment_bytes.into()).unwrap();
-    let z_lendian: [u8; 32] = Into::<[u8; 32]>::into(z_bytes)
-        .iter()
-        .rev()
-        .map(|&x| x)
-        .collect::<Vec<u8>>()
-        .try_into()
-        .unwrap();
-    let y_lendian: [u8; 32] = Into::<[u8; 32]>::into(y_bytes)
-        .iter()
-        .rev()
-        .map(|&x| x)
-        .collect::<Vec<u8>>()
-        .try_into()
-        .unwrap();
-    let z = Scalar::from_bytes(&z_lendian).unwrap();
-    let y = Scalar::from_bytes(&y_lendian).unwrap();
-    let proof = G1Affine::from_compressed(&proof_bytes.into()).unwrap();
+    let z = match safe_scalar_affine_from_bytes(z_bytes) {
+        Ok(z) => z,
+        Err(_) => {
+            return false;
+        }
+    };
+    let y = match safe_scalar_affine_from_bytes(y_bytes) {
+        Ok(y) => y,
+        Err(_) => {
+            return false;
+        }
+    };
+    let commitment = match safe_g1_affine_from_bytes(commitment_bytes) {
+        Ok(g1) => g1,
+        Err(_) => {
+            return false;
+        }
+    };
+    let proof = match safe_g1_affine_from_bytes(proof_bytes) {
+        Ok(g1) => g1,
+        Err(_) => {
+            return false;
+        }
+    };
 
     let g2_x = G2Affine::generator() * z;
     let x_minus_z = kzg_settings.g2_values[1] - g2_x;
@@ -68,7 +101,7 @@ mod tests {
             .map(|x| x.unwrap())
             .collect();
         for test_file in test_files {
-            let yaml_data = fs::read_to_string(test_file).unwrap();
+            let yaml_data = fs::read_to_string(test_file.clone()).unwrap();
             let test: Test = serde_yaml::from_str(&yaml_data).unwrap();
             let (Ok(commitment), Ok(z), Ok(y), Ok(proof)) = (
                 test.input.get_commitment(),
@@ -81,7 +114,7 @@ mod tests {
             };
 
             let result = crate::verify_kzg_proof(commitment, z, y, proof, kzg_settings.clone());
-            println!("Result: {} Output: {}", result, test.get_output().unwrap());
+            assert_eq!(result, test.get_output().unwrap_or_else(|| false));
         }
     }
 }
