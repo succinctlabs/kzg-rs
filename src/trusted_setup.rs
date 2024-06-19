@@ -83,15 +83,14 @@ fn load_trusted_setup(
 
 fn bit_reversal_permutation(g1_values: Vec<G1Affine>) -> Result<Vec<G1Affine>, KzgError> {
     let n = g1_values.len();
-    let mut bit_reversed_permutation = vec![G1Affine::default(); n];
+    assert!(n.is_power_of_two(), "n must be a power of 2");
 
-    let log_n = (n as f64).log2() as usize;
+    let mut bit_reversed_permutation: Vec<G1Affine> = vec![G1Affine::default(); n];
+    let unused_bit_len = g1_values.len().leading_zeros();
+
     for i in 0..n {
-        let mut j = 0;
-        for k in 0..log_n {
-            j |= (i >> k & 1) << (log_n - 1 - k);
-        }
-        bit_reversed_permutation[j] = g1_values[i];
+        let r = i.reverse_bits() >> unused_bit_len + 1;
+        bit_reversed_permutation[r] = g1_values[i];
     }
 
     Ok(bit_reversed_permutation)
@@ -122,4 +121,22 @@ fn is_trusted_setup_in_lagrange_form(kzg_settings: &KzgSettings) -> Result<(), K
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_bit_reversal_permutation() {
+        let N = 16;
+        let g1_values: Vec<bls12_381::G1Affine> = (0..N)
+            .map(|x| (bls12_381::G1Affine::generator() * bls12_381::Scalar::from(x)).into())
+            .collect();
+
+        let bit_reversed_permutation = super::bit_reversal_permutation(g1_values.clone()).unwrap();
+
+        for i in 0..N {
+            let r = i.reverse_bits() >> (N.leading_zeros() + 1);
+            assert_eq!(bit_reversed_permutation[r as usize], g1_values[i as usize]);
+        }
+    }
 }

@@ -28,3 +28,14 @@ pub fn verify_kzg_proof(
 
     pairing(&p_minus_y.into(), &G2Affine::generator()) == pairing(&proof, &x_minus_z.into())
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::trusted_setup;
+
+    #[test]
+    fn test_verify_kzg_proof() {
+        let kzg_settings = trusted_setup::load_trusted_setup_file().unwrap();
+        println!("{:?}", kzg_settings);
+    }
+}
