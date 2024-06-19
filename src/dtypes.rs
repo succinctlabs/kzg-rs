@@ -1,5 +1,3 @@
-use bls12_381::Scalar;
-
 use crate::enums::KzgError;
 use crate::hex_to_bytes;
 

@@ -1,5 +1,3 @@
-use std::error::Error;
-
 use bls12_381::{pairing, G1Affine, G2Affine, Scalar};
 use dtypes::*;
 use enums::KzgError;
