@@ -8,84 +8,85 @@ use crate::{
 
 const TRUSTED_SETUP: &str = include_str!("trusted_setup.txt");
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct KzgSettings {
     max_width: usize,
     pub(crate) g1_values: Vec<G1Affine>,
     pub(crate) g2_values: Vec<G2Affine>,
 }
 
-pub fn load_trusted_setup_file() -> Result<KzgSettings, KzgError> {
-    let trusted_setup_file: Vec<String> = TRUSTED_SETUP
-        .to_string()
-        .split("\n")
-        .map(|x| x.to_string())
-        .collect();
-
-    let num_g1_points = trusted_setup_file[0].parse::<usize>().unwrap();
-    let num_g2_points = trusted_setup_file[1].parse::<usize>().unwrap();
-    let g1_points_idx = num_g1_points + 2;
-    let g2_points_idx = g1_points_idx + num_g2_points;
-
-    let g1_points: Vec<[u8; BYTES_PER_G1_POINT]> =
-        hex_to_bytes(&trusted_setup_file[2..g1_points_idx].join(""))
-            .unwrap()
-            .chunks_exact(BYTES_PER_G1_POINT)
-            .map(|chunk| {
-                let mut array = [0u8; BYTES_PER_G1_POINT];
-                array.copy_from_slice(chunk);
-                array
-            })
-            .collect();
-    let g2_points: Vec<[u8; BYTES_PER_G2_POINT]> =
-        hex_to_bytes(&trusted_setup_file[g1_points_idx..g2_points_idx].join(""))
-            .unwrap()
-            .chunks_exact(BYTES_PER_G2_POINT)
-            .map(|chunk| {
-                let mut array = [0u8; BYTES_PER_G2_POINT];
-                array.copy_from_slice(chunk);
-                array
-            })
+impl KzgSettings {
+    pub fn load_trusted_setup_file() -> Result<Self, KzgError> {
+        let trusted_setup_file: Vec<String> = TRUSTED_SETUP
+            .to_string()
+            .split("\n")
+            .map(|x| x.to_string())
             .collect();
 
-    assert_eq!(g1_points.len(), num_g1_points);
-    assert_eq!(g2_points.len(), num_g2_points);
+        let num_g1_points = trusted_setup_file[0].parse::<usize>().unwrap();
+        let num_g2_points = trusted_setup_file[1].parse::<usize>().unwrap();
+        let g1_points_idx = num_g1_points + 2;
+        let g2_points_idx = g1_points_idx + num_g2_points;
 
-    load_trusted_setup(g1_points, g2_points)
-}
+        let g1_points: Vec<[u8; BYTES_PER_G1_POINT]> =
+            hex_to_bytes(&trusted_setup_file[2..g1_points_idx].join(""))
+                .unwrap()
+                .chunks_exact(BYTES_PER_G1_POINT)
+                .map(|chunk| {
+                    let mut array = [0u8; BYTES_PER_G1_POINT];
+                    array.copy_from_slice(chunk);
+                    array
+                })
+                .collect();
+        let g2_points: Vec<[u8; BYTES_PER_G2_POINT]> =
+            hex_to_bytes(&trusted_setup_file[g1_points_idx..g2_points_idx].join(""))
+                .unwrap()
+                .chunks_exact(BYTES_PER_G2_POINT)
+                .map(|chunk| {
+                    let mut array = [0u8; BYTES_PER_G2_POINT];
+                    array.copy_from_slice(chunk);
+                    array
+                })
+                .collect();
 
-fn load_trusted_setup(
-    g1_points: Vec<[u8; BYTES_PER_G1_POINT]>,
-    g2_points: Vec<[u8; BYTES_PER_G2_POINT]>,
-) -> Result<KzgSettings, KzgError> {
-    let mut kzg_settings = KzgSettings::default();
+        assert_eq!(g1_points.len(), num_g1_points);
+        assert_eq!(g2_points.len(), num_g2_points);
 
-    let mut max_scale = 0;
-    while (1 << max_scale) < g1_points.len() {
-        max_scale += 1;
+        Self::load_trusted_setup(g1_points, g2_points)
     }
-    kzg_settings.max_width = 1 << max_scale;
 
-    // Convert all bytes to points
-    g1_points.iter().for_each(|bytes| {
-        let g1_affine =
-            G1Affine::from_compressed(bytes).expect("load_trusted_setup Invalid g1 bytes");
-        kzg_settings.g1_values.push(g1_affine);
-    });
-    g2_points.iter().for_each(|bytes| {
-        let g2_affine =
-            G2Affine::from_compressed(bytes).expect("load_trusted_setup Invalid g2 bytes");
-        kzg_settings.g2_values.push(g2_affine);
-    });
+    pub fn load_trusted_setup(
+        g1_points: Vec<[u8; BYTES_PER_G1_POINT]>,
+        g2_points: Vec<[u8; BYTES_PER_G2_POINT]>,
+    ) -> Result<Self, KzgError> {
+        let mut kzg_settings = KzgSettings::default();
 
-    let _ = is_trusted_setup_in_lagrange_form(&kzg_settings);
+        let mut max_scale = 0;
+        while (1 << max_scale) < g1_points.len() {
+            max_scale += 1;
+        }
+        kzg_settings.max_width = 1 << max_scale;
 
-    let bit_reversed_permutation = bit_reversal_permutation(kzg_settings.g1_values)?;
-    kzg_settings.g1_values = bit_reversed_permutation;
+        // Convert all bytes to points
+        g1_points.iter().for_each(|bytes| {
+            let g1_affine =
+                G1Affine::from_compressed(bytes).expect("load_trusted_setup Invalid g1 bytes");
+            kzg_settings.g1_values.push(g1_affine);
+        });
+        g2_points.iter().for_each(|bytes| {
+            let g2_affine =
+                G2Affine::from_compressed(bytes).expect("load_trusted_setup Invalid g2 bytes");
+            kzg_settings.g2_values.push(g2_affine);
+        });
 
-    Ok(kzg_settings)
+        let _ = is_trusted_setup_in_lagrange_form(&kzg_settings);
+
+        let bit_reversed_permutation = bit_reversal_permutation(kzg_settings.g1_values)?;
+        kzg_settings.g1_values = bit_reversed_permutation;
+
+        Ok(kzg_settings)
+    }
 }
-
 fn bit_reversal_permutation(g1_values: Vec<G1Affine>) -> Result<Vec<G1Affine>, KzgError> {
     let n = g1_values.len();
     assert!(n.is_power_of_two(), "n must be a power of 2");

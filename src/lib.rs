@@ -1,7 +1,11 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[macro_use]
+extern crate alloc;
+
 use bls12_381::{pairing, G1Affine, G2Affine, Scalar};
 use dtypes::*;
 use enums::KzgError;
-use trusted_setup::KzgSettings;
 
 pub mod consts;
 pub mod dtypes;
@@ -9,8 +13,14 @@ pub mod enums;
 pub mod test_format;
 pub mod trusted_setup;
 
-fn safe_g1_affine_from_bytes(bytes: Bytes48) -> Result<G1Affine, KzgError> {
-    let g1 = G1Affine::from_compressed(&bytes.into());
+pub use consts::*;
+pub use dtypes::*;
+pub use trusted_setup::*;
+
+use alloc::vec::Vec;
+
+fn safe_g1_affine_from_bytes(bytes: &Bytes48) -> Result<G1Affine, KzgError> {
+    let g1 = G1Affine::from_compressed(&(bytes.clone().into()));
     if g1.is_none().into() {
         return Err(KzgError::BadArgs(
             "Failed to parse G1Affine from bytes".to_string(),
@@ -19,8 +29,8 @@ fn safe_g1_affine_from_bytes(bytes: Bytes48) -> Result<G1Affine, KzgError> {
     Ok(g1.unwrap())
 }
 
-fn safe_scalar_affine_from_bytes(bytes: Bytes32) -> Result<Scalar, KzgError> {
-    let lendian: [u8; 32] = Into::<[u8; 32]>::into(bytes)
+fn safe_scalar_affine_from_bytes(bytes: &Bytes32) -> Result<Scalar, KzgError> {
+    let lendian: [u8; 32] = Into::<[u8; 32]>::into(bytes.clone())
         .iter()
         .rev()
         .map(|&x| x)
@@ -36,45 +46,52 @@ fn safe_scalar_affine_from_bytes(bytes: Bytes32) -> Result<Scalar, KzgError> {
     Ok(scalar.unwrap())
 }
 
-pub fn verify_kzg_proof(
-    commitment_bytes: Bytes48,
-    z_bytes: Bytes32,
-    y_bytes: Bytes32,
-    proof_bytes: Bytes48,
-    kzg_settings: KzgSettings,
-) -> bool {
-    let z = match safe_scalar_affine_from_bytes(z_bytes) {
-        Ok(z) => z,
-        Err(_) => {
-            return false;
-        }
-    };
-    let y = match safe_scalar_affine_from_bytes(y_bytes) {
-        Ok(y) => y,
-        Err(_) => {
-            return false;
-        }
-    };
-    let commitment = match safe_g1_affine_from_bytes(commitment_bytes) {
-        Ok(g1) => g1,
-        Err(_) => {
-            return false;
-        }
-    };
-    let proof = match safe_g1_affine_from_bytes(proof_bytes) {
-        Ok(g1) => g1,
-        Err(_) => {
-            return false;
-        }
-    };
+pub struct KzgProof {}
 
-    let g2_x = G2Affine::generator() * z;
-    let x_minus_z = kzg_settings.g2_values[1] - g2_x;
+impl KzgProof {
+    pub fn verify_kzg_proof(
+        commitment_bytes: &Bytes48,
+        z_bytes: &Bytes32,
+        y_bytes: &Bytes32,
+        proof_bytes: &Bytes48,
+        kzg_settings: &KzgSettings,
+    ) -> Result<bool, KzgError> {
+        let z = match safe_scalar_affine_from_bytes(z_bytes) {
+            Ok(z) => z,
+            Err(e) => {
+                return Err(e);
+            }
+        };
+        let y = match safe_scalar_affine_from_bytes(y_bytes) {
+            Ok(y) => y,
+            Err(e) => {
+                return Err(e);
+            }
+        };
+        let commitment = match safe_g1_affine_from_bytes(commitment_bytes) {
+            Ok(g1) => g1,
+            Err(e) => {
+                return Err(e);
+            }
+        };
+        let proof = match safe_g1_affine_from_bytes(proof_bytes) {
+            Ok(g1) => g1,
+            Err(e) => {
+                return Err(e);
+            }
+        };
 
-    let g1_y = G1Affine::generator() * y;
-    let p_minus_y = commitment - g1_y;
+        let g2_x = G2Affine::generator() * z;
+        let x_minus_z = kzg_settings.g2_values[1] - g2_x;
 
-    pairing(&p_minus_y.into(), &G2Affine::generator()) == pairing(&proof, &x_minus_z.into())
+        let g1_y = G1Affine::generator() * y;
+        let p_minus_y = commitment - g1_y;
+
+        Ok(
+            pairing(&p_minus_y.into(), &G2Affine::generator())
+                == pairing(&proof, &x_minus_z.into()),
+        )
+    }
 }
 
 pub(crate) fn hex_to_bytes(hex_str: &str) -> Result<Vec<u8>, KzgError> {
@@ -87,13 +104,13 @@ pub(crate) fn hex_to_bytes(hex_str: &str) -> Result<Vec<u8>, KzgError> {
 mod tests {
     use std::{fs, path::PathBuf};
 
-    use crate::{test_format::Test, trusted_setup};
+    use crate::{test_format::Test, trusted_setup::KzgSettings, KzgProof};
 
     const VERIFY_KZG_PROOF_TESTS: &str = "tests/verify_kzg_proof/*/*";
 
     #[test]
     fn test_verify_kzg_proof() {
-        let kzg_settings = trusted_setup::load_trusted_setup_file().unwrap();
+        let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
         let test_files: Vec<PathBuf> = glob::glob(VERIFY_KZG_PROOF_TESTS)
             .unwrap()
             .map(|x| x.unwrap())
@@ -111,8 +128,16 @@ mod tests {
                 continue;
             };
 
-            let result = crate::verify_kzg_proof(commitment, z, y, proof, kzg_settings.clone());
-            assert_eq!(result, test.get_output().unwrap_or_else(|| false));
+            let result = KzgProof::verify_kzg_proof(&commitment, &z, &y, &proof, &kzg_settings);
+            match result {
+                Ok(result) => {
+                    assert_eq!(result, test.get_output().unwrap_or_else(|| false));
+                }
+                Err(e) => {
+                    assert!(test.get_output().is_none());
+                    eprintln!("Error: {:?}", e);
+                }
+            }
         }
     }
 }

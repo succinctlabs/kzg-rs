@@ -4,9 +4,17 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+serde = { version = "1.0", optional = true, default-features = false, features = [
+    "alloc",
+    "derive",
+] }
 bls12_381 = "0.8.0"
 glob = "0.3.1"
-hex = "0.4.3"
-serde = "1.0"
+hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
 serde_derive = "1.0"
-serde_yaml = "0.9"
+serde_yaml = { version = "0.9" }
+
+[features]
+default = ["std"]
+serde = ["dep:serde"]
+std = ["hex/std", "serde/std"]
