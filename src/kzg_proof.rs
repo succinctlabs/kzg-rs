@@ -4,6 +4,7 @@ use crate::trusted_setup::KzgSettings;
 use alloc::vec::Vec;
 use bls12_381::{pairing, G1Affine, G2Affine, Scalar};
 
+// #[sp1_derive::cycle_tracker]
 fn safe_g1_affine_from_bytes(bytes: &Bytes48) -> Result<G1Affine, KzgError> {
     let g1 = G1Affine::from_compressed(&(bytes.clone().into()));
     if g1.is_none().into() {
@@ -14,6 +15,7 @@ fn safe_g1_affine_from_bytes(bytes: &Bytes48) -> Result<G1Affine, KzgError> {
     Ok(g1.unwrap())
 }
 
+// #[sp1_derive::cycle_tracker]
 fn safe_scalar_affine_from_bytes(bytes: &Bytes32) -> Result<Scalar, KzgError> {
     let lendian: [u8; 32] = Into::<[u8; 32]>::into(bytes.clone())
         .iter()
@@ -34,6 +36,7 @@ fn safe_scalar_affine_from_bytes(bytes: &Bytes32) -> Result<Scalar, KzgError> {
 pub struct KzgProof {}
 
 impl KzgProof {
+   #[sp1_derive::cycle_tracker]
     pub fn verify_kzg_proof(
         commitment_bytes: &Bytes48,
         z_bytes: &Bytes32,
@@ -114,7 +117,7 @@ mod tests {
                 }
                 Err(e) => {
                     assert!(test.get_output().is_none());
-                    eprintln!("Error: {:?}", e);
+                   eprintln!("Error: {:?}", e);
                 }
             }
         }
