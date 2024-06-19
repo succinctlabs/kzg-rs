@@ -36,7 +36,7 @@ fn safe_scalar_affine_from_bytes(bytes: &Bytes32) -> Result<Scalar, KzgError> {
 pub struct KzgProof {}
 
 impl KzgProof {
-   #[sp1_derive::cycle_tracker]
+    #[sp1_derive::cycle_tracker]
     pub fn verify_kzg_proof(
         commitment_bytes: &Bytes48,
         z_bytes: &Bytes32,
@@ -86,13 +86,13 @@ impl KzgProof {
 mod tests {
     use std::{fs, path::PathBuf};
 
-    use crate::{test_format::Test, trusted_setup::KzgSettings, KzgProof};
+    use crate::{test_format::Test, trusted_setup::KzgSettings, KzgProof, TRUSTED_SETUP};
 
     const VERIFY_KZG_PROOF_TESTS: &str = "tests/verify_kzg_proof/*/*";
 
     #[test]
     fn test_verify_kzg_proof() {
-        let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
+        let kzg_settings = &TRUSTED_SETUP;
         let test_files: Vec<PathBuf> = glob::glob(VERIFY_KZG_PROOF_TESTS)
             .unwrap()
             .map(|x| x.unwrap())
@@ -117,7 +117,7 @@ mod tests {
                 }
                 Err(e) => {
                     assert!(test.get_output().is_none());
-                   eprintln!("Error: {:?}", e);
+                    eprintln!("Error: {:?}", e);
                 }
             }
         }
