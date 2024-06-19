@@ -19,8 +19,22 @@ pub fn verify_kzg_proof(
     kzg_settings: KzgSettings,
 ) -> bool {
     let commitment = G1Affine::from_compressed(&commitment_bytes.into()).unwrap();
-    let z = Scalar::from_bytes(&z_bytes.into()).unwrap();
-    let y = Scalar::from_bytes(&y_bytes.into()).unwrap();
+    let z_lendian: [u8; 32] = Into::<[u8; 32]>::into(z_bytes)
+        .iter()
+        .rev()
+        .map(|&x| x)
+        .collect::<Vec<u8>>()
+        .try_into()
+        .unwrap();
+    let y_lendian: [u8; 32] = Into::<[u8; 32]>::into(y_bytes)
+        .iter()
+        .rev()
+        .map(|&x| x)
+        .collect::<Vec<u8>>()
+        .try_into()
+        .unwrap();
+    let z = Scalar::from_bytes(&z_lendian).unwrap();
+    let y = Scalar::from_bytes(&y_lendian).unwrap();
     let proof = G1Affine::from_compressed(&proof_bytes.into()).unwrap();
 
     let g2_x = G2Affine::generator() * z;

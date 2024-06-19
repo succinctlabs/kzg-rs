@@ -18,19 +18,12 @@ dependencies = [
 name = "bls12_381"
 version = "0.8.0"
 dependencies = [
- "bytemuck",
  "ff",
  "group",
  "pairing",
  "rand_core",
  "subtle",
 ]
-
-[[package]]
-name = "bytemuck"
-version = "1.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78834c15cb5d5efe3452d58b1e8ba890dd62d21907f867f383358198e56ebca5"
 
 [[package]]
 name = "equivalent"
