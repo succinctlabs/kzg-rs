@@ -1,12 +1,15 @@
+use std::error::Error;
+
 use bls12_381::{pairing, G1Affine, G2Affine, Scalar};
+use dtypes::*;
+use enums::KzgError;
 use trusted_setup::KzgSettings;
 
 pub mod consts;
+pub mod dtypes;
 pub mod enums;
+pub mod test_format;
 pub mod trusted_setup;
-
-pub type Bytes32 = [u8; 32];
-pub type Bytes48 = [u8; 48];
 
 pub fn verify_kzg_proof(
     commitment_bytes: Bytes48,
@@ -15,10 +18,10 @@ pub fn verify_kzg_proof(
     proof_bytes: Bytes48,
     kzg_settings: KzgSettings,
 ) -> bool {
-    let commitment = G1Affine::from_compressed(&commitment_bytes).unwrap();
-    let z = Scalar::from_bytes(&z_bytes).unwrap();
-    let y = Scalar::from_bytes(&y_bytes).unwrap();
-    let proof = G1Affine::from_compressed(&proof_bytes).unwrap();
+    let commitment = G1Affine::from_compressed(&commitment_bytes.into()).unwrap();
+    let z = Scalar::from_bytes(&z_bytes.into()).unwrap();
+    let y = Scalar::from_bytes(&y_bytes.into()).unwrap();
+    let proof = G1Affine::from_compressed(&proof_bytes.into()).unwrap();
 
     let g2_x = G2Affine::generator() * z;
     let x_minus_z = kzg_settings.g2_values[1] - g2_x;
@@ -29,13 +32,42 @@ pub fn verify_kzg_proof(
     pairing(&p_minus_y.into(), &G2Affine::generator()) == pairing(&proof, &x_minus_z.into())
 }
 
+pub(crate) fn hex_to_bytes(hex_str: &str) -> Result<Vec<u8>, KzgError> {
+    let trimmed_str = hex_str.strip_prefix("0x").unwrap_or(hex_str);
+    hex::decode(trimmed_str)
+        .map_err(|e| KzgError::InvalidHexFormat(format!("Failed to decode hex: {}", e)))
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::trusted_setup;
+    use std::{fs, path::PathBuf};
+
+    use crate::{test_format::Test, trusted_setup};
+
+    const VERIFY_KZG_PROOF_TESTS: &str = "tests/verify_kzg_proof/*/*";
 
     #[test]
     fn test_verify_kzg_proof() {
         let kzg_settings = trusted_setup::load_trusted_setup_file().unwrap();
-        println!("{:?}", kzg_settings);
+        let test_files: Vec<PathBuf> = glob::glob(VERIFY_KZG_PROOF_TESTS)
+            .unwrap()
+            .map(|x| x.unwrap())
+            .collect();
+        for test_file in test_files {
+            let yaml_data = fs::read_to_string(test_file).unwrap();
+            let test: Test = serde_yaml::from_str(&yaml_data).unwrap();
+            let (Ok(commitment), Ok(z), Ok(y), Ok(proof)) = (
+                test.input.get_commitment(),
+                test.input.get_z(),
+                test.input.get_y(),
+                test.input.get_proof(),
+            ) else {
+                assert!(test.get_output().is_none());
+                continue;
+            };
+
+            let result = crate::verify_kzg_proof(commitment, z, y, proof, kzg_settings.clone());
+            println!("Result: {} Output: {}", result, test.get_output().unwrap());
+        }
     }
 }

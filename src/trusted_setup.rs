@@ -1,15 +1,17 @@
 use bls12_381::{G1Affine, G2Affine, Scalar};
 
 use crate::{
-    consts::{BYTES_PER_G1, BYTES_PER_G2, ROOT_OF_UNITY},
+    consts::{BYTES_PER_G1, BYTES_PER_G2, SCALE2_ROOT_OF_UNITY},
     enums::KzgError,
+    hex_to_bytes,
 };
 
 const TRUSTED_SETUP: &str = include_str!("trusted_setup.txt");
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct KzgSettings {
-    roots_of_unity: Scalar,
+    max_width: usize,
+    roots_of_unity: Vec<Scalar>,
     pub(crate) g1_values: Vec<G1Affine>,
     pub(crate) g2_values: Vec<G2Affine>,
 }
@@ -27,7 +29,7 @@ pub fn load_trusted_setup_file() -> Result<KzgSettings, KzgError> {
     let g2_points_idx = g1_points_idx + num_g2_points;
 
     let g1_points: Vec<[u8; BYTES_PER_G1]> =
-        hex::decode(trusted_setup_file[2..g1_points_idx].join(""))
+        hex_to_bytes(&trusted_setup_file[2..g1_points_idx].join(""))
             .unwrap()
             .chunks_exact(BYTES_PER_G1)
             .map(|chunk| {
@@ -37,7 +39,7 @@ pub fn load_trusted_setup_file() -> Result<KzgSettings, KzgError> {
             })
             .collect();
     let g2_points: Vec<[u8; BYTES_PER_G2]> =
-        hex::decode(trusted_setup_file[g1_points_idx..g2_points_idx].join(""))
+        hex_to_bytes(&trusted_setup_file[g1_points_idx..g2_points_idx].join(""))
             .unwrap()
             .chunks_exact(BYTES_PER_G2)
             .map(|chunk| {
@@ -58,7 +60,12 @@ fn load_trusted_setup(
     g2_points: Vec<[u8; BYTES_PER_G2]>,
 ) -> Result<KzgSettings, KzgError> {
     let mut kzg_settings = KzgSettings::default();
-    kzg_settings.roots_of_unity = ROOT_OF_UNITY;
+
+    let mut max_scale = 0;
+    while (1 << max_scale) < g1_points.len() {
+        max_scale += 1;
+    }
+    kzg_settings.max_width = 1 << max_scale;
 
     // Convert all bytes to points
     g1_points.iter().for_each(|bytes| {
@@ -74,11 +81,53 @@ fn load_trusted_setup(
 
     let _ = is_trusted_setup_in_lagrange_form(&kzg_settings);
 
-    kzg_settings.roots_of_unity = ROOT_OF_UNITY;
+    let roots_of_unity = compute_roots_of_unity(max_scale)?;
+    kzg_settings.roots_of_unity = roots_of_unity;
     let bit_reversed_permutation = bit_reversal_permutation(kzg_settings.g1_values)?;
     kzg_settings.g1_values = bit_reversed_permutation;
 
     Ok(kzg_settings)
+}
+
+fn is_raw_scalar_one(scalar: &Scalar) -> bool {
+    let field_one = Scalar::from_raw([1u64, 0u64, 0u64, 0u64]);
+    *scalar == field_one
+}
+
+fn expand_root_of_unity(root: &Scalar, width: usize) -> Result<Vec<Scalar>, KzgError> {
+    let mut res: Vec<Scalar> = vec![Scalar::default(); width + 1];
+    res[0] = Scalar::one();
+    res[1] = *root;
+
+    let mut i: usize = 2;
+    while !is_raw_scalar_one(&res[i - 1]) {
+        if i > width as usize {
+            return Err(KzgError::BadArgs("width too large".to_string()));
+        }
+        res[i] = res[i - 1] * root;
+        i += 1;
+    }
+
+    if !is_raw_scalar_one(&res[width]) {
+        return Err(KzgError::BadArgs("expected last root to be 1".to_string()));
+    }
+
+    Ok(res)
+}
+
+fn compute_roots_of_unity(max_scale: u32) -> Result<Vec<Scalar>, KzgError> {
+    let max_width = 1 << max_scale;
+
+    if max_scale >= SCALE2_ROOT_OF_UNITY.len() as u32 {
+        return Err(KzgError::BadArgs("max_scale too large".to_string()));
+    }
+
+    let root_of_unity = Scalar::one() * Scalar::from_raw(SCALE2_ROOT_OF_UNITY[max_scale as usize]);
+
+    let mut roots_of_unity = expand_root_of_unity(&root_of_unity, max_width).unwrap();
+    roots_of_unity.pop();
+
+    Ok(roots_of_unity)
 }
 
 fn bit_reversal_permutation(g1_values: Vec<G1Affine>) -> Result<Vec<G1Affine>, KzgError> {
