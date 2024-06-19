@@ -1,7 +1,7 @@
 use bls12_381::{G1Affine, G2Affine};
 
 use crate::{
-    consts::{BYTES_PER_G1, BYTES_PER_G2},
+    consts::{BYTES_PER_G1_POINT, BYTES_PER_G2_POINT},
     enums::KzgError,
     hex_to_bytes,
 };
@@ -27,22 +27,22 @@ pub fn load_trusted_setup_file() -> Result<KzgSettings, KzgError> {
     let g1_points_idx = num_g1_points + 2;
     let g2_points_idx = g1_points_idx + num_g2_points;
 
-    let g1_points: Vec<[u8; BYTES_PER_G1]> =
+    let g1_points: Vec<[u8; BYTES_PER_G1_POINT]> =
         hex_to_bytes(&trusted_setup_file[2..g1_points_idx].join(""))
             .unwrap()
-            .chunks_exact(BYTES_PER_G1)
+            .chunks_exact(BYTES_PER_G1_POINT)
             .map(|chunk| {
-                let mut array = [0u8; BYTES_PER_G1];
+                let mut array = [0u8; BYTES_PER_G1_POINT];
                 array.copy_from_slice(chunk);
                 array
             })
             .collect();
-    let g2_points: Vec<[u8; BYTES_PER_G2]> =
+    let g2_points: Vec<[u8; BYTES_PER_G2_POINT]> =
         hex_to_bytes(&trusted_setup_file[g1_points_idx..g2_points_idx].join(""))
             .unwrap()
-            .chunks_exact(BYTES_PER_G2)
+            .chunks_exact(BYTES_PER_G2_POINT)
             .map(|chunk| {
-                let mut array = [0u8; BYTES_PER_G2];
+                let mut array = [0u8; BYTES_PER_G2_POINT];
                 array.copy_from_slice(chunk);
                 array
             })
@@ -55,8 +55,8 @@ pub fn load_trusted_setup_file() -> Result<KzgSettings, KzgError> {
 }
 
 fn load_trusted_setup(
-    g1_points: Vec<[u8; BYTES_PER_G1]>,
-    g2_points: Vec<[u8; BYTES_PER_G2]>,
+    g1_points: Vec<[u8; BYTES_PER_G1_POINT]>,
+    g2_points: Vec<[u8; BYTES_PER_G2_POINT]>,
 ) -> Result<KzgSettings, KzgError> {
     let mut kzg_settings = KzgSettings::default();
 
