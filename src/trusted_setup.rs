@@ -5,24 +5,20 @@ use crate::{
     consts::{BYTES_PER_G1_POINT, BYTES_PER_G2_POINT},
     enums::KzgError,
     hex_to_bytes,
+    parse::get_trusted_setup,
 };
 
 const TRUSTED_SETUP_FILE: &str = include_str!("trusted_setup.txt");
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct KzgSettings {
-    max_width: usize,
+    pub(crate) max_width: usize,
     pub(crate) g1_values: Vec<G1Affine>,
     pub(crate) g2_values: Vec<G2Affine>,
 }
 
-pub static TRUSTED_SETUP: Lazy<KzgSettings> = Lazy::new(|| {
-    KzgSettings::load_trusted_setup_file().expect("Failed to load trusted setup file")
-});
-
 impl KzgSettings {
-    #[sp1_derive::cycle_tracker]
-    pub fn load_trusted_setup_file() -> Result<Self, KzgError> {
+    pub fn load_trusted_setup_file_brute() -> Result<Self, KzgError> {
         let trusted_setup_file: Vec<String> = TRUSTED_SETUP_FILE
             .to_string()
             .split("\n")
@@ -83,6 +79,11 @@ impl KzgSettings {
         kzg_settings.g1_values = bit_reversed_permutation;
 
         Ok(kzg_settings)
+    }
+
+    #[sp1_derive::cycle_tracker]
+    pub fn load_trusted_setup_file() -> Result<Self, KzgError> {
+        Ok(get_trusted_setup())
     }
 }
 // #[sp1_derive::cycle_tracker]

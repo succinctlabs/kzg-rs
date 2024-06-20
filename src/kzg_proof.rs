@@ -86,13 +86,13 @@ impl KzgProof {
 mod tests {
     use std::{fs, path::PathBuf};
 
-    use crate::{test_format::Test, trusted_setup::KzgSettings, KzgProof, TRUSTED_SETUP};
+    use crate::{test_format::Test, KzgProof, KzgSettings};
 
     const VERIFY_KZG_PROOF_TESTS: &str = "tests/verify_kzg_proof/*/*";
 
     #[test]
     fn test_verify_kzg_proof() {
-        let kzg_settings = &TRUSTED_SETUP;
+        let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
         let test_files: Vec<PathBuf> = glob::glob(VERIFY_KZG_PROOF_TESTS)
             .unwrap()
             .map(|x| x.unwrap())
