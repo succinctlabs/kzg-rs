@@ -26,7 +26,7 @@ dependencies = [
 [[package]]
 name = "bls12_381"
 version = "0.8.0"
-source = "git+https://github.com/0xWOLAND/bls12_381/#f1b400a9cf6dcd77d458f7f8efc149c683a8847d"
+source = "git+https://github.com/0xWOLAND/bls12_381#f1b400a9cf6dcd77d458f7f8efc149c683a8847d"
 dependencies = [
  "ff",
  "group",
@@ -102,6 +102,23 @@ name = "itoa"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49f1f14873335454500d59611f1cf4a4b0f786f9ac11f4312a78e4cf2566695b"
+
+[[package]]
+name = "kzg-rs"
+version = "0.1.0"
+dependencies = [
+ "bls12_381",
+ "glob",
+ "hex",
+ "once_cell",
+ "regex",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "serde_yaml",
+ "sp1-derive",
+ "subtle",
+]
 
 [[package]]
 name = "memchr"
@@ -241,23 +258,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
-]
-
-[[package]]
-name = "sp1-kzg"
-version = "0.1.0"
-dependencies = [
- "bls12_381",
- "glob",
- "hex",
- "once_cell",
- "regex",
- "serde",
- "serde_derive",
- "serde_json",
- "serde_yaml",
- "sp1-derive",
- "subtle",
 ]
 
 [[package]]
