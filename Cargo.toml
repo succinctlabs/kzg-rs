@@ -18,6 +18,7 @@ bls12_381 = { git = "https://github.com/0xWOLAND/bls12_381" }
 regex = "1.10.5"
 subtle = "2.2.1"
 serde_json = "1.0.117"
+const-chunks = "0.3.0"
 
 [features]
 default = ["std"]
