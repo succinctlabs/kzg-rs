@@ -1,5 +1,5 @@
 use crate::enums::KzgError;
-use crate::hex_to_bytes;
+use crate::{hex_to_bytes, NUM_G1_POINTS};
 
 macro_rules! define_bytes_type {
     ($name:ident, $size:expr) => {
