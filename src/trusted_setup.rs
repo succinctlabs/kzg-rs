@@ -1,5 +1,9 @@
 use core::{mem::transmute, slice};
 
+use alloc::{
+    string::{String, ToString},
+    vec::Vec,
+};
 use bls12_381::{G1Affine, G2Affine};
 
 use crate::{
@@ -45,13 +49,12 @@ pub struct KzgSettings {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KzgSettingsOwned {
     pub max_width: usize,
-    pub g1_points: Vec<G1Affine>,
-    pub g2_points: Vec<G2Affine>,
+    pub g1_points: [G1Affine; NUM_G1_POINTS],
+    pub g2_points: [G2Affine; NUM_G2_POINTS],
 }
 
 impl KzgSettings {
     #[cfg(feature = "cache")]
-    #[sp1_derive::cycle_tracker]
     pub fn load_trusted_setup_file() -> Result<Self, KzgError> {
         Ok(get_kzg_settings())
     }
@@ -119,12 +122,11 @@ pub fn load_trusted_setup_file_brute() -> Result<KzgSettingsOwned, KzgError> {
 
     Ok(KzgSettingsOwned {
         max_width,
-        g1_points: g1_points.to_vec(),
-        g2_points: g2_points.to_vec(),
+        g1_points,
+        g2_points,
     })
 }
 
-#[sp1_derive::cycle_tracker]
 fn bit_reversal_permutation(g1_points: &[G1Affine]) -> Result<[G1Affine; NUM_G1_POINTS], KzgError> {
     let n = g1_points.len();
     assert!(n.is_power_of_two(), "n must be a power of 2");
@@ -141,14 +143,12 @@ fn bit_reversal_permutation(g1_points: &[G1Affine]) -> Result<[G1Affine; NUM_G1_
     Ok(bit_reversed_permutation)
 }
 
-#[sp1_derive::cycle_tracker]
 fn pairings_verify(a1: G1Affine, a2: G2Affine, b1: G1Affine, b2: G2Affine) -> bool {
     let pairing1 = bls12_381::pairing(&a1, &a2);
     let pairing2 = bls12_381::pairing(&b1, &b2);
     pairing1 == pairing2
 }
 
-#[sp1_derive::cycle_tracker]
 fn is_trusted_setup_in_lagrange_form(
     g1_points: &[G1Affine],
     g2_points: &[G2Affine],

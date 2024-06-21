@@ -21,9 +21,10 @@ const-chunks = "0.3.0"
 bls12_381 = "0.8.0"
 
 [features]
-default = ["std"]
+default = []
 serde = ["dep:serde"]
-std = ["hex/std", "serde/std"]
+kzg-test = ['std', 'cache']
+std = ["dep:serde", "serde/std"]
 cache = []
 
 [[bin]]

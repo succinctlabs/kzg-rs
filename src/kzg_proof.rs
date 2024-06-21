@@ -1,10 +1,10 @@
 use crate::dtypes::*;
 use crate::enums::KzgError;
 use crate::trusted_setup::KzgSettings;
-use alloc::vec::Vec;
+
+use alloc::{string::ToString, vec::Vec};
 use bls12_381::{pairing, G1Affine, G2Affine, Scalar};
 
-// #[sp1_derive::cycle_tracker]
 fn safe_g1_affine_from_bytes(bytes: &Bytes48) -> Result<G1Affine, KzgError> {
     let g1 = G1Affine::from_compressed(&(bytes.clone().into()));
     if g1.is_none().into() {
@@ -15,7 +15,6 @@ fn safe_g1_affine_from_bytes(bytes: &Bytes48) -> Result<G1Affine, KzgError> {
     Ok(g1.unwrap())
 }
 
-// #[sp1_derive::cycle_tracker]
 fn safe_scalar_affine_from_bytes(bytes: &Bytes32) -> Result<Scalar, KzgError> {
     let lendian: [u8; 32] = Into::<[u8; 32]>::into(bytes.clone())
         .iter()
@@ -36,7 +35,6 @@ fn safe_scalar_affine_from_bytes(bytes: &Bytes32) -> Result<Scalar, KzgError> {
 pub struct KzgProof {}
 
 impl KzgProof {
-    #[sp1_derive::cycle_tracker]
     pub fn verify_kzg_proof(
         commitment_bytes: &Bytes48,
         z_bytes: &Bytes32,
@@ -82,12 +80,53 @@ impl KzgProof {
     }
 }
 
+#[cfg(feature = "std")]
 #[cfg(test)]
 mod tests {
-    use crate::{test_format::Test, KzgProof, KzgSettings};
+    use super::*;
+    use serde_derive::Deserialize;
     use std::{fs, path::PathBuf};
 
     const VERIFY_KZG_PROOF_TESTS: &str = "tests/verify_kzg_proof/*/*";
+
+    #[derive(Deserialize)]
+    pub struct Input<'a> {
+        commitment: &'a str,
+        z: &'a str,
+        y: &'a str,
+        proof: &'a str,
+    }
+
+    impl Input<'_> {
+        pub fn get_commitment(&self) -> Result<Bytes48, KzgError> {
+            Bytes48::from_hex(self.commitment)
+        }
+
+        pub fn get_z(&self) -> Result<Bytes32, KzgError> {
+            Bytes32::from_hex(self.z)
+        }
+
+        pub fn get_y(&self) -> Result<Bytes32, KzgError> {
+            Bytes32::from_hex(self.y)
+        }
+
+        pub fn get_proof(&self) -> Result<Bytes48, KzgError> {
+            Bytes48::from_hex(self.proof)
+        }
+    }
+
+    #[derive(Deserialize)]
+    pub struct Test<'a> {
+        #[serde(borrow)]
+        pub input: Input<'a>,
+        output: Option<bool>,
+    }
+
+    impl Test<'_> {
+        pub fn get_output(&self) -> Option<bool> {
+            self.output
+        }
+    }
 
     #[test]
     #[cfg(feature = "cache")]

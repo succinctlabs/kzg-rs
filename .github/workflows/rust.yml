@@ -19,4 +19,4 @@ jobs:
     - name: Build
       run: cargo build --verbose --features=cache
     - name: Run tests
-      run: cargo test --verbose --features=cache
+      run: cargo test --verbose --features=kzg-test

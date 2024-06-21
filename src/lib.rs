@@ -3,13 +3,16 @@
 #[macro_use]
 extern crate alloc;
 
+#[cfg(feature = "std")]
+extern crate std;
+
 pub mod consts;
 pub mod dtypes;
 pub mod enums;
 pub mod kzg_proof;
-pub mod test_format;
 pub mod trusted_setup;
 
+use alloc::vec::Vec;
 pub use consts::*;
 pub use dtypes::*;
 pub use kzg_proof::KzgProof;
