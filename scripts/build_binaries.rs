@@ -1,7 +1,7 @@
 use std::{fs, io::Write};
 
 use bls12_381::{G1Affine, G2Affine};
-use kzg_rs::{load_trusted_setup_file_brute, KzgSettings, KzgSettingsOwned};
+use kzg_rs::{load_trusted_setup_file_brute, KzgSettingsOwned};
 
 fn main() {
     let KzgSettingsOwned {

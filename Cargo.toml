@@ -24,6 +24,7 @@ const-chunks = "0.3.0"
 default = ["std"]
 serde = ["dep:serde"]
 std = ["hex/std", "serde/std"]
+cache = []
 
 [[bin]]
 name = "build_binaries"

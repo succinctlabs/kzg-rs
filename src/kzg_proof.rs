@@ -90,6 +90,7 @@ mod tests {
     const VERIFY_KZG_PROOF_TESTS: &str = "tests/verify_kzg_proof/*/*";
 
     #[test]
+    #[cfg(feature = "cache")]
     fn test_verify_kzg_proof() {
         let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
         let test_files: Vec<PathBuf> = glob::glob(VERIFY_KZG_PROOF_TESTS)

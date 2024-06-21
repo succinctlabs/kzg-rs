@@ -10,6 +10,7 @@ use crate::{
 
 const TRUSTED_SETUP_FILE: &str = include_str!("trusted_setup.txt");
 
+#[cfg(feature = "cache")]
 pub const fn get_g1_points() -> &'static [G1Affine] {
     const G1_BYTES: &[u8] = include_bytes!("g1.bin");
     let g1: &[G1Affine] =
@@ -17,6 +18,7 @@ pub const fn get_g1_points() -> &'static [G1Affine] {
     g1
 }
 
+#[cfg(feature = "cache")]
 pub const fn get_g2_points() -> &'static [G2Affine] {
     const G2_BYTES: &[u8] = include_bytes!("g2.bin");
     let g2: &[G2Affine] =
@@ -24,6 +26,7 @@ pub const fn get_g2_points() -> &'static [G2Affine] {
     g2
 }
 
+#[cfg(feature = "cache")]
 pub const fn get_kzg_settings() -> KzgSettings {
     KzgSettings {
         max_width: 16,
@@ -47,6 +50,7 @@ pub struct KzgSettingsOwned {
 }
 
 impl KzgSettings {
+    #[cfg(feature = "cache")]
     #[sp1_derive::cycle_tracker]
     pub fn load_trusted_setup_file() -> Result<Self, KzgError> {
         Ok(get_kzg_settings())
