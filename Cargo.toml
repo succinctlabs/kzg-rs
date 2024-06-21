@@ -24,3 +24,7 @@ const-chunks = "0.3.0"
 default = ["std"]
 serde = ["dep:serde"]
 std = ["hex/std", "serde/std"]
+
+[[bin]]
+name = "build_binaries"
+path = "scripts/build_binaries.rs"

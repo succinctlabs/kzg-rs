@@ -84,74 +84,14 @@ impl KzgProof {
 
 #[cfg(test)]
 mod tests {
-    use core::{
-        mem::{self, transmute},
-        slice,
-    };
-    use std::{
-        fs,
-        io::Write,
-        path::{self, PathBuf},
-    };
-
-    use bls12_381::{G1Affine, G2Affine};
-
-    use crate::{
-        get_g1_points, test_format::Test, KzgProof, KzgSettings, BYTES_PER_G1_POINT, NUM_G1_POINTS,
-    };
+    use crate::{test_format::Test, KzgProof, KzgSettings};
+    use std::{fs, path::PathBuf};
 
     const VERIFY_KZG_PROOF_TESTS: &str = "tests/verify_kzg_proof/*/*";
 
-    // TODO: Move to script
-    // #[test]
-    // fn build_binary_file() {
-    //     let kzg_settings = KzgSettings::load_trusted_setup_file();
-    //     let g1_values = kzg_settings.g1_points.clone();
-    //     let g2_values = kzg_settings.g2_points.clone();
-
-    //     let mut g1_bytes: Vec<u8> = Vec::new();
-    //     let mut g2_bytes: Vec<u8> = Vec::new();
-
-    //     g1_values.iter().for_each(|&v| {
-    //         g1_bytes.extend_from_slice(unsafe { &std::mem::transmute::<G1Affine, [u8; 104]>(v) });
-    //     });
-
-    //     g2_values.iter().for_each(|&v| {
-    //         g2_bytes.extend_from_slice(unsafe { &std::mem::transmute::<G2Affine, [u8; 200]>(v) });
-    //     });
-
-    //     let mut g1_file = fs::OpenOptions::new()
-    //         .create(true)
-    //         .write(true)
-    //         .open("g1.bin")
-    //         .unwrap();
-
-    //     g1_file.write_all(&g1_bytes).unwrap();
-
-    //     let mut g2_file = fs::OpenOptions::new()
-    //         .create(true)
-    //         .write(true)
-    //         .open("g2.bin")
-    //         .unwrap();
-
-    //     g2_file.write_all(&g2_bytes).unwrap();
-    // }
-
-    #[test]
-    fn build_from_binary_file() {
-        let g1_bytes = include_bytes!("g1.bin");
-        let g1 = get_g1_points();
-        // let g1: &[G1Affine] =
-        //     unsafe { transmute(slice::from_raw_parts(g1_bytes.as_ptr(), NUM_G1_POINTS)) };
-        println!("{:?}", g1);
-        // G1Affine { x: 0x025a6f586726c68d45f00ad0f5a4436523317939a47713f78fd4fe81cd74236fdac1b04ecd97c2d0267d6f4981d7beb1, y: 0x09a1275f9efcc1e3166cdea9eff740ac675d8ec22fc07467f17c933e66ef3502e44dc20dcefd2f29621de1b9f64400f9, infinity: Choice(0) }
-
-        // println!("{}", g1_bytes.len() / mem::size_of::<G1Affine>())
-    }
-
     #[test]
     fn test_verify_kzg_proof() {
-        let kzg_settings = KzgSettings::load_trusted_setup_file();
+        let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
         let test_files: Vec<PathBuf> = glob::glob(VERIFY_KZG_PROOF_TESTS)
             .unwrap()
             .map(|x| x.unwrap())
