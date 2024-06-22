@@ -17,6 +17,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Build
-      run: cargo build --verbose --features=cache
+      run: cargo build --verbose --no-default-features --features=cache
     - name: Run tests
       run: cargo test --verbose --features=kzg-test
