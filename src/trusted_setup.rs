@@ -1,10 +1,17 @@
-use core::{mem::transmute, slice};
+use core::{
+    hash::{Hash, Hasher},
+    mem::transmute,
+    slice,
+};
 
 use alloc::{
+    boxed::Box,
     string::{String, ToString},
+    sync::Arc,
     vec::Vec,
 };
 use bls12_381::{G1Affine, G2Affine};
+use once_cell::race::OnceBox;
 
 use crate::{
     consts::{BYTES_PER_G1_POINT, BYTES_PER_G2_POINT},
@@ -44,6 +51,50 @@ pub struct KzgSettings {
     pub(crate) max_width: usize,
     pub(crate) g1_points: &'static [G1Affine],
     pub(crate) g2_points: &'static [G2Affine],
+}
+
+#[derive(Debug, Clone, Default, Eq)]
+pub enum EnvKzgSettings {
+    #[default]
+    Default,
+    Custom(Arc<KzgSettings>),
+}
+
+impl PartialEq for EnvKzgSettings {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Default, Self::Default) => true,
+            (Self::Custom(a), Self::Custom(b)) => Arc::ptr_eq(a, b),
+            _ => false,
+        }
+    }
+}
+
+impl Hash for EnvKzgSettings {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        core::mem::discriminant(self).hash(state);
+        match self {
+            Self::Default => {}
+            Self::Custom(settings) => Arc::as_ptr(settings).hash(state),
+        }
+    }
+}
+
+#[cfg(feature = "cache")]
+impl EnvKzgSettings {
+    pub fn get(&self) -> &KzgSettings {
+        match self {
+            Self::Default => {
+                static DEFAULT: OnceBox<KzgSettings> = OnceBox::new();
+                DEFAULT.get_or_init(|| {
+                    let settings = KzgSettings::load_trusted_setup_file()
+                        .expect("failed to load default trusted setup");
+                    Box::new(settings)
+                })
+            }
+            Self::Custom(settings) => settings,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
