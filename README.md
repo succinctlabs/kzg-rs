@@ -12,9 +12,12 @@ An endpoint for `verify_kzg_proof` in [c-kzg-4844](https://github.com/ethereum/c
 Checkout the SP1 profile at [0xWOLAND/sp1-revm-kzg-profile](https://github.com/0xWOLAND/sp1-revm-kzg-profile). This crate has been used in a [fork of SP1's patch of `revm`](https://github.com/0xWOLAND/revm/tree/patch-v5.0.0), which passes all tests. Additionally, `kzg-rs` is based on [this](https://github.com/0xWOLAND/bls12_381) slightly modified fork of `bls12_381`. This crate works in `[no_std]` mode.
 
 ## Usage
-Add
+```
+cargo add kzg-rs
+```
+And add
 ```toml
-kzg-rs = { git = "https://github.com/0xWOLAND/kzg-rs", default-features = false, features=['cache'] optional = true }
+kzg-rs = { version = "0.1", default-features = false, features=['cache'] optional = true }
 ```
 
 You can rebuild `g1.bin` and `g2.bin` by running 
