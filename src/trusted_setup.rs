@@ -23,6 +23,18 @@ use crate::{
 const TRUSTED_SETUP_FILE: &str = include_str!("trusted_setup.txt");
 
 #[cfg(feature = "cache")]
+pub const fn get_roots_of_unity() -> &'static [Scalar] {
+    const ROOT_OF_UNITY_BYTES: &[u8] = include_bytes!("roots_of_unity.bin");
+    let roots_of_unity: &[Scalar] = unsafe {
+        transmute(slice::from_raw_parts(
+            ROOT_OF_UNITY_BYTES.as_ptr(),
+            NUM_ROOTS_OF_UNITY,
+        ))
+    };
+    roots_of_unity
+}
+
+#[cfg(feature = "cache")]
 pub const fn get_g1_points() -> &'static [G1Affine] {
     const G1_BYTES: &[u8] = include_bytes!("g1.bin");
     let g1: &[G1Affine] =
@@ -41,7 +53,7 @@ pub const fn get_g2_points() -> &'static [G2Affine] {
 #[cfg(feature = "cache")]
 pub const fn get_kzg_settings() -> KzgSettings {
     KzgSettings {
-        max_width: 16,
+        roots_of_unity: get_roots_of_unity(),
         g1_points: get_g1_points(),
         g2_points: get_g2_points(),
     }
