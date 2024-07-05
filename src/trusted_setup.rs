@@ -16,7 +16,8 @@ use once_cell::race::OnceBox;
 use crate::{
     consts::{BYTES_PER_G1_POINT, BYTES_PER_G2_POINT},
     enums::KzgError,
-    hex_to_bytes, NUM_G1_POINTS, NUM_G2_POINTS, NUM_ROOTS_OF_UNITY, SCALE2_ROOT_OF_UNITY,
+    hex_to_bytes, pairings_verify, NUM_G1_POINTS, NUM_G2_POINTS, NUM_ROOTS_OF_UNITY,
+    SCALE2_ROOT_OF_UNITY,
 };
 
 const TRUSTED_SETUP_FILE: &str = include_str!("trusted_setup.txt");
@@ -48,7 +49,7 @@ pub const fn get_kzg_settings() -> KzgSettings {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KzgSettings {
-    pub(crate) max_width: usize,
+    pub(crate) roots_of_unity: &'static [Scalar],
     pub(crate) g1_points: &'static [G1Affine],
     pub(crate) g2_points: &'static [G2Affine],
 }
@@ -188,12 +189,6 @@ where
     }
 
     Ok(bit_reversed_permutation)
-}
-
-fn pairings_verify(a1: G1Affine, a2: G2Affine, b1: G1Affine, b2: G2Affine) -> bool {
-    let pairing1 = bls12_381::pairing(&a1, &a2);
-    let pairing2 = bls12_381::pairing(&b1, &b2);
-    pairing1 == pairing2
 }
 
 fn is_trusted_setup_in_lagrange_form(
