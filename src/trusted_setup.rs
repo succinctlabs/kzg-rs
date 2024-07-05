@@ -159,7 +159,12 @@ pub fn load_trusted_setup_file_brute() -> Result<KzgSettingsOwned, KzgError> {
     assert_eq!(_g1_points.len(), num_g1_points);
     assert_eq!(_g2_points.len(), num_g2_points);
 
-    let roots_of_unity = compute_roots_of_unity::<NUM_ROOTS_OF_UNITY>()?;
+    let mut max_scale = 0;
+    while (1 << max_scale) < _g1_points.len() {
+        max_scale += 1;
+    }
+
+    let roots_of_unity = compute_roots_of_unity(max_scale)?;
     let mut g1_points: [G1Affine; NUM_G1_POINTS] = [G1Affine::identity(); NUM_G1_POINTS];
     let mut g2_points: [G2Affine; NUM_G2_POINTS] = [G2Affine::identity(); NUM_G2_POINTS];
 
@@ -227,18 +232,16 @@ fn is_trusted_setup_in_lagrange_form(
     Ok(())
 }
 
-fn compute_roots_of_unity<const N: usize>() -> Result<[Scalar; N], KzgError> {
-    let max_width = 1 << N;
-
-    if N >= SCALE2_ROOT_OF_UNITY.len() {
+fn compute_roots_of_unity<const N: usize>(max_scale: usize) -> Result<[Scalar; N], KzgError> {
+    if max_scale >= SCALE2_ROOT_OF_UNITY.len() {
         return Err(KzgError::BadArgs(format!(
             "The max scale should be lower than {}",
             SCALE2_ROOT_OF_UNITY.len()
         )));
     }
 
-    let root_of_unity = Scalar::from_raw(SCALE2_ROOT_OF_UNITY[N]);
-    let mut expanded_roots = expand_root_of_unity(root_of_unity, max_width)?;
+    let root_of_unity = Scalar::from_raw(SCALE2_ROOT_OF_UNITY[max_scale]);
+    let mut expanded_roots = expand_root_of_unity(root_of_unity, N)?;
     let _ = expanded_roots.pop();
 
     bit_reversal_permutation(&expanded_roots)
@@ -253,7 +256,7 @@ fn expand_root_of_unity(root: Scalar, width: usize) -> Result<Vec<Scalar>, KzgEr
 
     let mut expanded = vec![Scalar::one(), root];
 
-    for _ in 2..width {
+    for _ in 2..=width {
         let current = expanded.last().unwrap() * root;
         expanded.push(current);
         if current == Scalar::one() {
