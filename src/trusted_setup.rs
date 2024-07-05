@@ -10,13 +10,13 @@ use alloc::{
     sync::Arc,
     vec::Vec,
 };
-use bls12_381::{G1Affine, G2Affine};
+use bls12_381::{G1Affine, G2Affine, Scalar};
 use once_cell::race::OnceBox;
 
 use crate::{
     consts::{BYTES_PER_G1_POINT, BYTES_PER_G2_POINT},
     enums::KzgError,
-    hex_to_bytes, NUM_G1_POINTS, NUM_G2_POINTS,
+    hex_to_bytes, NUM_G1_POINTS, NUM_G2_POINTS, NUM_ROOTS_OF_UNITY, SCALE2_ROOT_OF_UNITY,
 };
 
 const TRUSTED_SETUP_FILE: &str = include_str!("trusted_setup.txt");
@@ -99,7 +99,7 @@ impl EnvKzgSettings {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KzgSettingsOwned {
-    pub max_width: usize,
+    pub roots_of_unity: [Scalar; NUM_ROOTS_OF_UNITY],
     pub g1_points: [G1Affine; NUM_G1_POINTS],
     pub g2_points: [G2Affine; NUM_G2_POINTS],
 }
@@ -113,7 +113,6 @@ impl KzgSettings {
 
 pub fn load_trusted_setup_file_brute() -> Result<KzgSettingsOwned, KzgError> {
     let trusted_setup_file: Vec<String> = TRUSTED_SETUP_FILE
-        .to_string()
         .split("\n")
         .map(|x| x.to_string())
         .collect();
@@ -147,12 +146,7 @@ pub fn load_trusted_setup_file_brute() -> Result<KzgSettingsOwned, KzgError> {
     assert_eq!(_g1_points.len(), num_g1_points);
     assert_eq!(_g2_points.len(), num_g2_points);
 
-    let mut max_scale = 0;
-    while (1 << max_scale) < _g1_points.len() {
-        max_scale += 1;
-    }
-    let max_width = 1 << max_scale;
-
+    let roots_of_unity = compute_roots_of_unity::<NUM_ROOTS_OF_UNITY>()?;
     let mut g1_points: [G1Affine; NUM_G1_POINTS] = [G1Affine::identity(); NUM_G1_POINTS];
     let mut g2_points: [G2Affine; NUM_G2_POINTS] = [G2Affine::identity(); NUM_G2_POINTS];
 
@@ -172,23 +166,25 @@ pub fn load_trusted_setup_file_brute() -> Result<KzgSettingsOwned, KzgError> {
     let g1_points = bit_reversed_permutation;
 
     Ok(KzgSettingsOwned {
-        max_width,
+        roots_of_unity,
         g1_points,
         g2_points,
     })
 }
 
-fn bit_reversal_permutation(g1_points: &[G1Affine]) -> Result<[G1Affine; NUM_G1_POINTS], KzgError> {
-    let n = g1_points.len();
+fn bit_reversal_permutation<T, const N: usize>(array: &[T]) -> Result<[T; N], KzgError>
+where
+    T: Default + Copy,
+{
+    let n = array.len();
     assert!(n.is_power_of_two(), "n must be a power of 2");
 
-    let mut bit_reversed_permutation: [G1Affine; NUM_G1_POINTS] =
-        [G1Affine::identity(); NUM_G1_POINTS];
-    let unused_bit_len = g1_points.len().leading_zeros();
+    let mut bit_reversed_permutation = [T::default(); N];
+    let unused_bit_len = array.len().leading_zeros();
 
     for i in 0..n {
-        let r = i.reverse_bits() >> unused_bit_len + 1;
-        bit_reversed_permutation[r] = g1_points[i];
+        let r = i.reverse_bits() >> (unused_bit_len + 1);
+        bit_reversed_permutation[r] = array[i];
     }
 
     Ok(bit_reversed_permutation)
@@ -222,4 +218,47 @@ fn is_trusted_setup_in_lagrange_form(
     }
 
     Ok(())
+}
+
+fn compute_roots_of_unity<const N: usize>() -> Result<[Scalar; N], KzgError> {
+    let max_width = 1 << N;
+
+    if N >= SCALE2_ROOT_OF_UNITY.len() {
+        return Err(KzgError::BadArgs(format!(
+            "The max scale should be lower than {}",
+            SCALE2_ROOT_OF_UNITY.len()
+        )));
+    }
+
+    let root_of_unity = Scalar::from_raw(SCALE2_ROOT_OF_UNITY[N]);
+    let mut expanded_roots = expand_root_of_unity(root_of_unity, max_width)?;
+    let _ = expanded_roots.pop();
+
+    bit_reversal_permutation(&expanded_roots)
+}
+
+fn expand_root_of_unity(root: Scalar, width: usize) -> Result<Vec<Scalar>, KzgError> {
+    if width < 2 {
+        return Err(KzgError::BadArgs(
+            "The width must be greater or equal to 2".to_string(),
+        ));
+    }
+
+    let mut expanded = vec![Scalar::one(), root];
+
+    for _ in 2..width {
+        let current = expanded.last().unwrap() * root;
+        expanded.push(current);
+        if current == Scalar::one() {
+            break;
+        }
+    }
+
+    if expanded.last().unwrap() != &Scalar::one() {
+        return Err(KzgError::InvalidBytesLength(
+            "The last element value should be equal to 1".to_string(),
+        ));
+    }
+
+    Ok(expanded)
 }

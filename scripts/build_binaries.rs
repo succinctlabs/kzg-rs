@@ -5,7 +5,7 @@ use kzg_rs::{load_trusted_setup_file_brute, KzgSettingsOwned};
 
 fn main() {
     let KzgSettingsOwned {
-        max_width: _,
+        roots_of_unity: _,
         g1_points,
         g2_points,
     } = load_trusted_setup_file_brute().unwrap();
