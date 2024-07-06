@@ -101,14 +101,17 @@ fn evaluate_polynomial_in_evaluation_form(
     x: Scalar,
     kzg_settings: &KzgSettings,
 ) -> Result<Scalar, KzgError> {
-    let mut inverses_in = vec![];
+    if polynomial.len() != NUM_FIELD_ELEMENTS_PER_BLOB {
+        return Err(KzgError::InvalidBytesLength(
+            "The polynomial length is incorrect".to_string(),
+        ));
+    }
+
+    let mut inverses_in = vec![Scalar::default(); NUM_FIELD_ELEMENTS_PER_BLOB];
+    let mut inverses = vec![Scalar::default(); NUM_FIELD_ELEMENTS_PER_BLOB];
     let roots_of_unity = kzg_settings.roots_of_unity;
 
-    for (i, _) in polynomial
-        .iter()
-        .enumerate()
-        .take(NUM_FIELD_ELEMENTS_PER_BLOB)
-    {
+    for i in 0..NUM_FIELD_ELEMENTS_PER_BLOB {
         // If the point to evaluate at is one of the evaluation points by which
         // the polynomial is given, we can just return the result directly.
         // Note that special-casing this is necessary, as the formula below
@@ -116,11 +119,12 @@ fn evaluate_polynomial_in_evaluation_form(
         if x == roots_of_unity[i] {
             return Ok(polynomial[i]);
         }
-        inverses_in.push(x - roots_of_unity[i])
+        inverses_in[i] = x - roots_of_unity[i];
     }
 
-    let inverses = batch_inversion(
-        inverses_in,
+    batch_inversion(
+        &mut inverses,
+        &inverses_in,
         NonZero::new(NUM_FIELD_ELEMENTS_PER_BLOB).unwrap(),
     )?;
 
@@ -138,27 +142,32 @@ fn evaluate_polynomial_in_evaluation_form(
     Ok(out)
 }
 
-fn batch_inversion(a: Vec<Scalar>, len: NonZeroUsize) -> Result<Vec<Scalar>, KzgError> {
-    let mut accumulator = Scalar::one();
-    let mut out = vec![];
+fn batch_inversion(out: &mut [Scalar], a: &[Scalar], len: NonZeroUsize) -> Result<(), KzgError> {
+    if a == out {
+        return Err(KzgError::BadArgs(
+            "Destination is the same as source".to_string(),
+        ));
+    }
 
-    for a in a.iter().take(len.into()) {
-        out.push(accumulator);
-        accumulator *= a;
+    let mut accumulator = Scalar::one();
+
+    for i in 0..len.into() {
+        out[i] = accumulator;
+        accumulator = accumulator.mul(&a[i]);
     }
 
     if accumulator == Scalar::zero() {
-        return Err(KzgError::BadArgs("Zero input is not allowed".to_string()));
+        return Err(KzgError::BadArgs("Zero input".to_string()));
     }
 
     accumulator = accumulator.invert().unwrap();
 
-    for (i, out) in out.iter_mut().rev().enumerate() {
-        *out *= accumulator;
+    for i in (0..len.into()).rev() {
+        out[i] *= accumulator;
         accumulator *= a[i];
     }
 
-    Ok(out)
+    Ok(())
 }
 
 fn verify_kzg_proof_impl(
@@ -441,4 +450,30 @@ mod tests {
         )
     }
 
+    #[test]
+    #[cfg(feature = "cache")]
+    fn test_evaluate_polynomial_in_evaluation_form() {
+        let test_file = "tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_19b3f3f8c98ea31e/data.yaml";
+
+        let yaml_data = fs::read_to_string(test_file).unwrap();
+        let test: BlobTest = serde_yaml::from_str(&yaml_data).unwrap();
+        let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
+        let blob = test.input.get_blob().unwrap();
+        let polynomial = blob.as_polynomial().unwrap();
+
+        let evaluation_challenge = scalar_from_bytes_unchecked(
+            Bytes32::from_hex("0x637c904d316955b7282f980433d5cd9f40d0533c45d0a233c009bc7fe28b92e3")
+                .unwrap()
+                .into(),
+        );
+
+        let y =
+            evaluate_polynomial_in_evaluation_form(polynomial, evaluation_challenge, &kzg_settings)
+                .unwrap();
+
+        assert_eq!(
+            format!("{y}"),
+            "0x1bdfc5da40334b9c51220e8cbea1679c20a7f32dd3d7f3c463149bb4b41a7d18"
+        );
+    }
 }
