@@ -7,7 +7,6 @@ use crate::{
     DOMAIN_STR_LENGTH, FIAT_SHAMIR_PROTOCOL_DOMAIN, NUM_FIELD_ELEMENTS_PER_BLOB,
 };
 
-use alloc::fmt::format;
 use alloc::{string::ToString, vec::Vec};
 use bls12_381::{pairing, G1Affine, G1Projective, G2Affine, G2Projective, Scalar};
 use sha2::{Digest, Sha256};
@@ -49,18 +48,17 @@ fn compute_challenge(blob: Blob, commitment: &G1Affine) -> Result<Scalar, KzgErr
     offset += DOMAIN_STR_LENGTH;
 
     // Copy polynomial degree (16-bytes, big-endian)
-    bytes[offset..u64::BITS as usize].copy_from_slice(&0_u64.to_be_bytes());
-    offset += u64::BITS as usize;
-    bytes[offset..u64::BITS as usize]
-        .copy_from_slice(&(NUM_FIELD_ELEMENTS_PER_BLOB as u64).to_be_bytes());
-    offset += u64::BITS as usize;
+    bytes[offset..offset + 8].copy_from_slice(&0_u64.to_be_bytes());
+    offset += 8;
+    bytes[offset..offset + 8].copy_from_slice(&(NUM_FIELD_ELEMENTS_PER_BLOB as u64).to_be_bytes());
+    offset += 8;
 
     // Copy blob
-    bytes[offset..BYTES_PER_BLOB].copy_from_slice(blob.as_slice());
+    bytes[offset..offset + BYTES_PER_BLOB].copy_from_slice(blob.as_slice());
     offset += BYTES_PER_BLOB;
 
     // Copy commitment
-    bytes[offset..BYTES_PER_COMMITMENT].copy_from_slice(&commitment.to_compressed());
+    bytes[offset..offset + BYTES_PER_COMMITMENT].copy_from_slice(&commitment.to_compressed());
     offset += BYTES_PER_COMMITMENT;
 
     /* Make sure we wrote the entire buffer */
@@ -268,6 +266,7 @@ mod tests {
     use std::{fs, path::PathBuf};
 
     const VERIFY_KZG_PROOF_TESTS: &str = "tests/verify_kzg_proof/*/*";
+    const VERIFY_BLOB_KZG_PROOF_TESTS: &str = "tests/verify_blob_kzg_proof/*/*";
 
     #[derive(Deserialize)]
     pub struct Input<'a> {
@@ -332,7 +331,74 @@ mod tests {
             let result = KzgProof::verify_kzg_proof(&commitment, &z, &y, &proof, &kzg_settings);
             match result {
                 Ok(result) => {
-                    assert_eq!(result, test.get_output().unwrap_or_else(|| false));
+                    assert_eq!(result, test.get_output().unwrap_or(false));
+                }
+                Err(e) => {
+                    assert!(test.get_output().is_none());
+                    eprintln!("Error: {:?}", e);
+                }
+            }
+        }
+    }
+
+    #[derive(Deserialize)]
+    pub struct BlobInput<'a> {
+        blob: &'a str,
+        commitment: &'a str,
+        proof: &'a str,
+    }
+
+    impl BlobInput<'_> {
+        pub fn get_blob(&self) -> Result<Blob, KzgError> {
+            Blob::from_hex(self.blob)
+        }
+
+        pub fn get_commitment(&self) -> Result<Bytes48, KzgError> {
+            Bytes48::from_hex(self.commitment)
+        }
+
+        pub fn get_proof(&self) -> Result<Bytes48, KzgError> {
+            Bytes48::from_hex(self.proof)
+        }
+    }
+
+    #[derive(Deserialize)]
+    pub struct BlobTest<'a> {
+        #[serde(borrow)]
+        pub input: BlobInput<'a>,
+        output: Option<bool>,
+    }
+
+    impl BlobTest<'_> {
+        pub fn get_output(&self) -> Option<bool> {
+            self.output
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "cache")]
+    fn test_verify_blob_kzg_proof() {
+        let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
+        let test_files: Vec<PathBuf> = glob::glob(VERIFY_BLOB_KZG_PROOF_TESTS)
+            .unwrap()
+            .map(|x| x.unwrap())
+            .collect();
+        for test_file in test_files {
+            let yaml_data = fs::read_to_string(test_file.clone()).unwrap();
+            let test: BlobTest = serde_yaml::from_str(&yaml_data).unwrap();
+            let (Ok(blob), Ok(commitment), Ok(proof)) = (
+                test.input.get_blob(),
+                test.input.get_commitment(),
+                test.input.get_proof(),
+            ) else {
+                assert!(test.get_output().is_none());
+                continue;
+            };
+
+            let result = KzgProof::verify_blob_kzg_proof(blob, &commitment, &proof, &kzg_settings);
+            match result {
+                Ok(result) => {
+                    assert_eq!(result, test.get_output().unwrap_or(false));
                 }
                 Err(e) => {
                     assert!(test.get_output().is_none());
