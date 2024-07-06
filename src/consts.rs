@@ -206,3 +206,12 @@ pub const SCALE2_ROOT_OF_UNITY: [[u64; 4]; 32] = [
         0x4b5371495990693f,
     ],
 ];
+
+/// Constant representing the modulus
+/// q = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
+pub const MODULUS: [u64; 4] = [
+    0xffff_ffff_0000_0001,
+    0x53bd_a402_fffe_5bfe,
+    0x3339_d808_09a1_d805,
+    0x73ed_a753_299d_7d48,
+];

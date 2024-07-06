@@ -4,11 +4,12 @@ use crate::enums::KzgError;
 use crate::trusted_setup::KzgSettings;
 use crate::{
     dtypes::*, pairings_verify, BYTES_PER_BLOB, BYTES_PER_COMMITMENT, CHALLENGE_INPUT_SIZE,
-    DOMAIN_STR_LENGTH, FIAT_SHAMIR_PROTOCOL_DOMAIN, NUM_FIELD_ELEMENTS_PER_BLOB,
+    DOMAIN_STR_LENGTH, FIAT_SHAMIR_PROTOCOL_DOMAIN, MODULUS, NUM_FIELD_ELEMENTS_PER_BLOB,
 };
 
 use alloc::{string::ToString, vec::Vec};
 use bls12_381::{pairing, G1Affine, G1Projective, G2Affine, G2Projective, Scalar};
+use ff::derive::sbb;
 use sha2::{Digest, Sha256};
 
 fn safe_g1_affine_from_bytes(bytes: &Bytes48) -> Result<G1Affine, KzgError> {
@@ -70,13 +71,28 @@ fn compute_challenge(blob: Blob, commitment: &G1Affine) -> Result<Scalar, KzgErr
         )));
     }
 
-    let mut hasher = Sha256::new();
-    hasher.update(bytes);
+    let evaluation: [u8; 32] = Sha256::digest(bytes).into();
 
-    let eval_challenge = hasher.finalize();
-    let challenge = safe_scalar_affine_from_bytes(&Bytes32::from_slice(&eval_challenge)?)?;
+    Ok(scalar_from_bytes_unchecked(evaluation))
+}
 
-    Ok(challenge)
+fn scalar_from_bytes_unchecked(bytes: [u8; 32]) -> Scalar {
+    scalar_from_u64_array_unchecked([
+        u64::from_be_bytes(<[u8; 8]>::try_from(&bytes[0..8]).unwrap()),
+        u64::from_be_bytes(<[u8; 8]>::try_from(&bytes[8..16]).unwrap()),
+        u64::from_be_bytes(<[u8; 8]>::try_from(&bytes[16..24]).unwrap()),
+        u64::from_be_bytes(<[u8; 8]>::try_from(&bytes[24..32]).unwrap()),
+    ])
+}
+
+fn scalar_from_u64_array_unchecked(array: [u64; 4]) -> Scalar {
+    // Try to subtract the modulus
+    let (_, borrow) = sbb(array[0], MODULUS[0], 0);
+    let (_, borrow) = sbb(array[1], MODULUS[1], borrow);
+    let (_, borrow) = sbb(array[2], MODULUS[2], borrow);
+    let (_, _borrow) = sbb(array[3], MODULUS[3], borrow);
+
+    Scalar::from_raw([array[3], array[2], array[1], array[0]])
 }
 
 /// Evaluates a polynomial in evaluation form at a given point
@@ -407,4 +423,22 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn test_compute_challenge() {
+        let test_file = "tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_fb324bc819407148/data.yaml";
+
+        let yaml_data = fs::read_to_string(test_file).unwrap();
+        let test: BlobTest = serde_yaml::from_str(&yaml_data).unwrap();
+        let blob = test.input.get_blob().unwrap();
+        let commitment = safe_g1_affine_from_bytes(&test.input.get_commitment().unwrap()).unwrap();
+
+        let evaluation_challenge = compute_challenge(blob, &commitment).unwrap();
+
+        assert_eq!(
+            format!("{evaluation_challenge}"),
+            "0x4f00eef944a21cb9f3ac3390702621e4bbf1198767c43c0fb9c8e9923bfbb31a"
+        )
+    }
+
 }
