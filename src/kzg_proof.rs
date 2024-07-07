@@ -1,4 +1,5 @@
 use core::num::{NonZero, NonZeroUsize};
+use core::ops::Mul;
 
 use crate::enums::KzgError;
 use crate::trusted_setup::KzgSettings;
@@ -40,7 +41,7 @@ pub(crate) fn safe_scalar_affine_from_bytes(bytes: &Bytes32) -> Result<Scalar, K
 }
 
 /// Return the Fiat-Shamir challenge required to verify `blob` and `commitment`.
-fn compute_challenge(blob: Blob, commitment: &G1Affine) -> Result<Scalar, KzgError> {
+fn compute_challenge(blob: &Blob, commitment: &G1Affine) -> Result<Scalar, KzgError> {
     let mut bytes = [0_u8; CHALLENGE_INPUT_SIZE];
     let mut offset = 0_usize;
 
@@ -192,6 +193,46 @@ fn verify_kzg_proof_impl(
     ))
 }
 
+fn validate_batched_input(commitments: &[G1Affine], proofs: &[G1Affine]) -> Result<(), KzgError> {
+    let invalid_commitment = commitments.iter().any(|commitment| {
+        !bool::from(commitment.is_identity()) && !bool::from(commitment.is_on_curve())
+    });
+
+    let invalid_proof = proofs
+        .iter()
+        .any(|proof| !bool::from(proof.is_identity()) && !bool::from(proof.is_on_curve()));
+
+    if invalid_commitment {
+        return Err(KzgError::BadArgs("Invalid commitment".to_string()));
+    }
+    if invalid_proof {
+        return Err(KzgError::BadArgs("Invalid proof".to_string()));
+    }
+
+    Ok(())
+}
+
+fn compute_challenges_and_evaluate_polynomial(
+    blobs: Vec<Blob>,
+    commitments: &[G1Affine],
+    kzg_settings: &KzgSettings,
+) -> Result<(Vec<Scalar>, Vec<Scalar>), KzgError> {
+    let mut evaluation_challenges = Vec::with_capacity(blobs.len());
+    let mut ys = Vec::with_capacity(blobs.len());
+
+    for i in 0..blobs.len() {
+        let polynomial = blobs[i].as_polynomial()?;
+        let evaluation_challenge = compute_challenge(&blobs[i], &commitments[i])?;
+        let y =
+            evaluate_polynomial_in_evaluation_form(polynomial, evaluation_challenge, kzg_settings)?;
+
+        evaluation_challenges.push(evaluation_challenge);
+        ys.push(y);
+    }
+
+    Ok((evaluation_challenges, ys))
+}
+
 pub struct KzgProof {}
 
 impl KzgProof {
@@ -239,6 +280,16 @@ impl KzgProof {
         )
     }
 
+    pub fn verify_kzg_proof_batch(
+        commitments: &[G1Affine],
+        zs: &[Scalar],
+        ys: &[Scalar],
+        proofs: &[G1Affine],
+        kzg_settings: &KzgSettings,
+    ) -> Result<bool, KzgError> {
+        todo!()
+    }
+
     pub fn verify_blob_kzg_proof(
         blob: Blob,
         commitment_bytes: &Bytes48,
@@ -250,7 +301,7 @@ impl KzgProof {
         let proof = safe_g1_affine_from_bytes(proof_bytes)?;
 
         // Compute challenge for the blob/commitment
-        let evaluation_challenge = compute_challenge(blob, &commitment)?;
+        let evaluation_challenge = compute_challenge(&blob, &commitment)?;
 
         let y =
             evaluate_polynomial_in_evaluation_form(polynomial, evaluation_challenge, kzg_settings)?;
@@ -279,7 +330,40 @@ impl KzgProof {
             );
         }
 
-        todo!()
+        if blobs.len() != commitments_bytes.len() {
+            return Err(KzgError::InvalidBytesLength(
+                "Invalid commitments length".to_string(),
+            ));
+        }
+
+        if blobs.len() != proofs_bytes.len() {
+            return Err(KzgError::InvalidBytesLength(
+                "Invalid proofs length".to_string(),
+            ));
+        }
+
+        let commitments = commitments_bytes
+            .iter()
+            .map(safe_g1_affine_from_bytes)
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let proofs = proofs_bytes
+            .iter()
+            .map(safe_g1_affine_from_bytes)
+            .collect::<Result<Vec<_>, _>>()?;
+
+        validate_batched_input(&commitments, &proofs)?;
+
+        let (evaluation_challenges, ys) =
+            compute_challenges_and_evaluate_polynomial(blobs, &commitments, kzg_settings)?;
+
+        Self::verify_kzg_proof_batch(
+            &commitments,
+            &evaluation_challenges,
+            &ys,
+            &proofs,
+            kzg_settings,
+        )
     }
 }
 
@@ -442,7 +526,7 @@ mod tests {
         let blob = test.input.get_blob().unwrap();
         let commitment = safe_g1_affine_from_bytes(&test.input.get_commitment().unwrap()).unwrap();
 
-        let evaluation_challenge = compute_challenge(blob, &commitment).unwrap();
+        let evaluation_challenge = compute_challenge(&blob, &commitment).unwrap();
 
         assert_eq!(
             format!("{evaluation_challenge}"),
