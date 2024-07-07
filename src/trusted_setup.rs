@@ -10,16 +10,29 @@ use alloc::{
     sync::Arc,
     vec::Vec,
 };
-use bls12_381::{G1Affine, G2Affine};
+use bls12_381::{G1Affine, G2Affine, Scalar};
 use once_cell::race::OnceBox;
 
 use crate::{
     consts::{BYTES_PER_G1_POINT, BYTES_PER_G2_POINT},
     enums::KzgError,
-    hex_to_bytes, NUM_G1_POINTS, NUM_G2_POINTS,
+    hex_to_bytes, pairings_verify, NUM_G1_POINTS, NUM_G2_POINTS, NUM_ROOTS_OF_UNITY,
+    SCALE2_ROOT_OF_UNITY,
 };
 
 const TRUSTED_SETUP_FILE: &str = include_str!("trusted_setup.txt");
+
+#[cfg(feature = "cache")]
+pub const fn get_roots_of_unity() -> &'static [Scalar] {
+    const ROOT_OF_UNITY_BYTES: &[u8] = include_bytes!("roots_of_unity.bin");
+    let roots_of_unity: &[Scalar] = unsafe {
+        transmute(slice::from_raw_parts(
+            ROOT_OF_UNITY_BYTES.as_ptr(),
+            NUM_ROOTS_OF_UNITY,
+        ))
+    };
+    roots_of_unity
+}
 
 #[cfg(feature = "cache")]
 pub const fn get_g1_points() -> &'static [G1Affine] {
@@ -40,7 +53,7 @@ pub const fn get_g2_points() -> &'static [G2Affine] {
 #[cfg(feature = "cache")]
 pub const fn get_kzg_settings() -> KzgSettings {
     KzgSettings {
-        max_width: 16,
+        roots_of_unity: get_roots_of_unity(),
         g1_points: get_g1_points(),
         g2_points: get_g2_points(),
     }
@@ -48,7 +61,7 @@ pub const fn get_kzg_settings() -> KzgSettings {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KzgSettings {
-    pub(crate) max_width: usize,
+    pub(crate) roots_of_unity: &'static [Scalar],
     pub(crate) g1_points: &'static [G1Affine],
     pub(crate) g2_points: &'static [G2Affine],
 }
@@ -99,7 +112,7 @@ impl EnvKzgSettings {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KzgSettingsOwned {
-    pub max_width: usize,
+    pub roots_of_unity: [Scalar; NUM_ROOTS_OF_UNITY],
     pub g1_points: [G1Affine; NUM_G1_POINTS],
     pub g2_points: [G2Affine; NUM_G2_POINTS],
 }
@@ -113,7 +126,6 @@ impl KzgSettings {
 
 pub fn load_trusted_setup_file_brute() -> Result<KzgSettingsOwned, KzgError> {
     let trusted_setup_file: Vec<String> = TRUSTED_SETUP_FILE
-        .to_string()
         .split("\n")
         .map(|x| x.to_string())
         .collect();
@@ -151,8 +163,8 @@ pub fn load_trusted_setup_file_brute() -> Result<KzgSettingsOwned, KzgError> {
     while (1 << max_scale) < _g1_points.len() {
         max_scale += 1;
     }
-    let max_width = 1 << max_scale;
 
+    let roots_of_unity = compute_roots_of_unity(max_scale)?;
     let mut g1_points: [G1Affine; NUM_G1_POINTS] = [G1Affine::identity(); NUM_G1_POINTS];
     let mut g2_points: [G2Affine; NUM_G2_POINTS] = [G2Affine::identity(); NUM_G2_POINTS];
 
@@ -172,32 +184,28 @@ pub fn load_trusted_setup_file_brute() -> Result<KzgSettingsOwned, KzgError> {
     let g1_points = bit_reversed_permutation;
 
     Ok(KzgSettingsOwned {
-        max_width,
+        roots_of_unity,
         g1_points,
         g2_points,
     })
 }
 
-fn bit_reversal_permutation(g1_points: &[G1Affine]) -> Result<[G1Affine; NUM_G1_POINTS], KzgError> {
-    let n = g1_points.len();
+fn bit_reversal_permutation<T, const N: usize>(array: &[T]) -> Result<[T; N], KzgError>
+where
+    T: Default + Copy,
+{
+    let n = array.len();
     assert!(n.is_power_of_two(), "n must be a power of 2");
 
-    let mut bit_reversed_permutation: [G1Affine; NUM_G1_POINTS] =
-        [G1Affine::identity(); NUM_G1_POINTS];
-    let unused_bit_len = g1_points.len().leading_zeros();
+    let mut bit_reversed_permutation = [T::default(); N];
+    let unused_bit_len = array.len().leading_zeros();
 
     for i in 0..n {
-        let r = i.reverse_bits() >> unused_bit_len + 1;
-        bit_reversed_permutation[r] = g1_points[i];
+        let r = i.reverse_bits() >> (unused_bit_len + 1);
+        bit_reversed_permutation[r] = array[i];
     }
 
     Ok(bit_reversed_permutation)
-}
-
-fn pairings_verify(a1: G1Affine, a2: G2Affine, b1: G1Affine, b2: G2Affine) -> bool {
-    let pairing1 = bls12_381::pairing(&a1, &a2);
-    let pairing2 = bls12_381::pairing(&b1, &b2);
-    pairing1 == pairing2
 }
 
 fn is_trusted_setup_in_lagrange_form(
@@ -222,4 +230,45 @@ fn is_trusted_setup_in_lagrange_form(
     }
 
     Ok(())
+}
+
+fn compute_roots_of_unity<const N: usize>(max_scale: usize) -> Result<[Scalar; N], KzgError> {
+    if max_scale >= SCALE2_ROOT_OF_UNITY.len() {
+        return Err(KzgError::BadArgs(format!(
+            "The max scale should be lower than {}",
+            SCALE2_ROOT_OF_UNITY.len()
+        )));
+    }
+
+    let root_of_unity = Scalar::from_raw(SCALE2_ROOT_OF_UNITY[max_scale]);
+    let mut expanded_roots = expand_root_of_unity(root_of_unity, N)?;
+    let _ = expanded_roots.pop();
+
+    bit_reversal_permutation(&expanded_roots)
+}
+
+fn expand_root_of_unity(root: Scalar, width: usize) -> Result<Vec<Scalar>, KzgError> {
+    if width < 2 {
+        return Err(KzgError::BadArgs(
+            "The width must be greater or equal to 2".to_string(),
+        ));
+    }
+
+    let mut expanded = vec![Scalar::one(), root];
+
+    for _ in 2..=width {
+        let current = expanded.last().unwrap() * root;
+        expanded.push(current);
+        if current == Scalar::one() {
+            break;
+        }
+    }
+
+    if expanded.last().unwrap() != &Scalar::one() {
+        return Err(KzgError::InvalidBytesLength(
+            "The last element value should be equal to 1".to_string(),
+        ));
+    }
+
+    Ok(expanded)
 }
