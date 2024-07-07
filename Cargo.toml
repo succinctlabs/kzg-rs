@@ -31,3 +31,7 @@ cache = []
 [[bin]]
 name = "build_binaries"
 path = "scripts/build_binaries.rs"
+
+# TODO: Remove this once https://github.com/zkcrypto/bls12_381/pull/132 is merged
+[patch.crates-io]
+bls12_381 = { git = "https://github.com/leruaa/bls12_381", branch = "msm_variable_base" }

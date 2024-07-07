@@ -4,8 +4,9 @@ use core::ops::Mul;
 use crate::enums::KzgError;
 use crate::trusted_setup::KzgSettings;
 use crate::{
-    dtypes::*, pairings_verify, BYTES_PER_BLOB, BYTES_PER_COMMITMENT, CHALLENGE_INPUT_SIZE,
-    DOMAIN_STR_LENGTH, FIAT_SHAMIR_PROTOCOL_DOMAIN, MODULUS, NUM_FIELD_ELEMENTS_PER_BLOB,
+    dtypes::*, pairings_verify, BYTES_PER_BLOB, BYTES_PER_COMMITMENT, BYTES_PER_FIELD_ELEMENT,
+    BYTES_PER_PROOF, CHALLENGE_INPUT_SIZE, DOMAIN_STR_LENGTH, FIAT_SHAMIR_PROTOCOL_DOMAIN, MODULUS,
+    NUM_FIELD_ELEMENTS_PER_BLOB, RANDOM_CHALLENGE_KZG_BATCH_DOMAIN,
 };
 
 use alloc::{string::ToString, vec::Vec};
@@ -233,6 +234,74 @@ fn compute_challenges_and_evaluate_polynomial(
     Ok((evaluation_challenges, ys))
 }
 
+pub fn compute_powers(base: &Scalar, num_powers: usize) -> Vec<Scalar> {
+    let mut powers = vec![Scalar::default(); num_powers];
+    if num_powers == 0 {
+        return powers;
+    }
+    powers[0] = Scalar::one();
+    for i in 1..num_powers {
+        powers[i] = powers[i - 1].mul(base);
+    }
+    powers
+}
+
+fn compute_r_powers(
+    commitments: &[G1Affine],
+    zs: &[Scalar],
+    ys: &[Scalar],
+    proofs: &[G1Affine],
+) -> Result<Vec<Scalar>, KzgError> {
+    let n = commitments.len();
+    let input_size =
+        32 + n * (BYTES_PER_COMMITMENT + 2 * BYTES_PER_FIELD_ELEMENT + BYTES_PER_PROOF);
+
+    let mut bytes: Vec<u8> = vec![0; input_size];
+
+    // Copy domain separator
+    bytes[..16].copy_from_slice(RANDOM_CHALLENGE_KZG_BATCH_DOMAIN.as_bytes());
+
+    bytes[16..24].copy_from_slice(&(NUM_FIELD_ELEMENTS_PER_BLOB as u64).to_be_bytes());
+    bytes[24..32].copy_from_slice(&n.to_be_bytes());
+
+    let mut offset = 32;
+
+    for i in 0..n {
+        // Copy commitment
+        let v = commitments[i].to_compressed();
+        bytes[offset..(v.len() + offset)].copy_from_slice(&v[..]);
+        offset += BYTES_PER_COMMITMENT;
+
+        // Copy evaluation challenge
+        let v = zs[i].to_bytes();
+        bytes[offset..(v.len() + offset)].copy_from_slice(&v[..]);
+        offset += BYTES_PER_FIELD_ELEMENT;
+
+        // Copy polynomial's evaluation value
+        let v = ys[i].to_bytes();
+        bytes[offset..(v.len() + offset)].copy_from_slice(&v[..]);
+        offset += BYTES_PER_FIELD_ELEMENT;
+
+        // Copy proof
+        let v = proofs[i].to_compressed();
+        bytes[offset..(v.len() + offset)].copy_from_slice(&v[..]);
+        offset += BYTES_PER_PROOF;
+    }
+
+    // Make sure we wrote the entire buffer
+    if offset != input_size {
+        return Err(KzgError::InvalidBytesLength(
+            "Error while copying commitments".to_string(),
+        ));
+    }
+
+    // Now let's create the challenge!
+    let evaluation: [u8; 32] = Sha256::digest(bytes).into();
+    let r = scalar_from_bytes_unchecked(evaluation);
+
+    Ok(compute_powers(&r, n))
+}
+
 pub struct KzgProof {}
 
 impl KzgProof {
@@ -287,7 +356,41 @@ impl KzgProof {
         proofs: &[G1Affine],
         kzg_settings: &KzgSettings,
     ) -> Result<bool, KzgError> {
-        todo!()
+        let n = commitments.len();
+        let mut c_minus_y: Vec<G1Projective> = Vec::with_capacity(n);
+        let mut r_times_z: Vec<Scalar> = Vec::with_capacity(n);
+
+        // Compute the random lincomb challenges
+        let r_powers = compute_r_powers(commitments, zs, ys, proofs)?;
+
+        // Compute \sum r^i * Proof_i
+        let proofs = proofs.iter().map(Into::into).collect::<Vec<_>>();
+        let proof_lincomb = G1Projective::msm_variable_base(&proofs, &r_powers);
+
+        for i in 0..n {
+            // Get [y_i]
+            let ys_encrypted = G1Affine::generator() * ys[i];
+            // Get C_i - [y_i]
+            c_minus_y.push(commitments[i] - ys_encrypted);
+            // Get r^i * z_i
+            r_times_z.push(r_powers[i] * zs[i]);
+        }
+
+        // Get \sum r^i z_i Proof_i
+        let proof_z_lincomb = G1Projective::msm_variable_base(&proofs, &r_times_z);
+        // Get \sum r^i (C_i - [y_i])
+        let c_minus_y_lincomb = G1Projective::msm_variable_base(&c_minus_y, &r_powers);
+
+        // Get C_minus_y_lincomb + proof_z_lincomb
+        let rhs_g1 = c_minus_y_lincomb + proof_z_lincomb;
+
+        // Do the pairing check!
+        Ok(pairings_verify(
+            proof_lincomb.into(),
+            kzg_settings.g2_points[1],
+            rhs_g1.into(),
+            G2Affine::generator(),
+        ))
     }
 
     pub fn verify_blob_kzg_proof(
@@ -376,6 +479,7 @@ mod tests {
 
     const VERIFY_KZG_PROOF_TESTS: &str = "tests/verify_kzg_proof/*/*";
     const VERIFY_BLOB_KZG_PROOF_TESTS: &str = "tests/verify_blob_kzg_proof/*/*";
+    const VERIFY_BLOB_KZG_PROOF_BATCH_TESTS: &str = "tests/verify_blob_kzg_proof_batch/*/*";
 
     #[derive(Debug, Deserialize)]
     pub struct Input<'a> {
@@ -491,6 +595,82 @@ mod tests {
             };
 
             let result = KzgProof::verify_blob_kzg_proof(blob, &commitment, &proof, &kzg_settings);
+            match result {
+                Ok(result) => {
+                    assert_eq!(result, test.get_output().unwrap_or(false));
+                }
+                Err(e) => {
+                    assert!(test.get_output().is_none());
+                    eprintln!("Error: {:?}", e);
+                }
+            }
+        }
+    }
+
+    #[derive(Debug, Deserialize)]
+    pub struct BlobBatchInput<'a> {
+        #[serde(borrow)]
+        blobs: Vec<&'a str>,
+        #[serde(borrow)]
+        commitments: Vec<&'a str>,
+        #[serde(borrow)]
+        proofs: Vec<&'a str>,
+    }
+
+    impl<'a> BlobBatchInput<'a> {
+        pub fn get_blobs(&self) -> Result<Vec<Blob>, KzgError> {
+            let mut v = Vec::new();
+
+            for blob in &self.blobs {
+                v.push(Blob::from_hex(blob)?);
+            }
+
+            Ok(v)
+        }
+
+        pub fn get_commitments(&self) -> Result<Vec<Bytes48>, KzgError> {
+            self.commitments
+                .iter()
+                .map(|str| Bytes48::from_hex(str))
+                .collect()
+        }
+
+        pub fn get_proofs(&self) -> Result<Vec<Bytes48>, KzgError> {
+            self.proofs
+                .iter()
+                .map(|str| Bytes48::from_hex(str))
+                .collect()
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "cache")]
+    fn test_verify_blob_kzg_proof_batch() {
+        let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
+
+        let test_files: Vec<PathBuf> = glob::glob(VERIFY_BLOB_KZG_PROOF_BATCH_TESTS)
+            .unwrap()
+            .map(|x| x.unwrap())
+            .collect();
+
+        let yaml_data = fs::read_to_string(test_files[0].clone()).unwrap();
+        let test: Test<BlobBatchInput> = serde_yaml::from_str(&yaml_data).unwrap();
+
+        for test_file in test_files {
+            let yaml_data = fs::read_to_string(test_file.clone()).unwrap();
+            let test: Test<BlobBatchInput> = serde_yaml::from_str(&yaml_data).unwrap();
+
+            let (Ok(blobs), Ok(commitments), Ok(proofs)) = (
+                test.input.get_blobs(),
+                test.input.get_commitments(),
+                test.input.get_proofs(),
+            ) else {
+                assert!(test.get_output().is_none());
+                continue;
+            };
+
+            let result =
+                KzgProof::verify_blob_kzg_proof_batch(blobs, commitments, proofs, &kzg_settings);
             match result {
                 Ok(result) => {
                     assert_eq!(result, test.get_output().unwrap_or(false));
