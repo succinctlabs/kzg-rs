@@ -19,7 +19,7 @@ pub use dtypes::*;
 pub use kzg_proof::KzgProof;
 pub use trusted_setup::*;
 
-use enums::KzgError;
+pub use enums::KzgError;
 
 pub(crate) fn hex_to_bytes(hex_str: &str) -> Result<Vec<u8>, KzgError> {
     let trimmed_str = hex_str.strip_prefix("0x").unwrap_or(hex_str);
