@@ -1,4 +1,5 @@
 use alloc::string::String;
+use core::fmt;
 
 #[derive(Debug, Clone)]
 pub enum KzgError {
@@ -12,4 +13,19 @@ pub enum KzgError {
     InvalidHexFormat(String),
     /// The provided trusted setup params are invalid.
     InvalidTrustedSetup(String),
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for KzgError {}
+
+impl fmt::Display for KzgError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::BadArgs(s)
+            | Self::InvalidBytesLength(s)
+            | Self::InvalidHexFormat(s)
+            | Self::InvalidTrustedSetup(s) => f.write_str(s),
+            Self::InternalError => f.write_str("Internal error"),
+        }
+    }
 }
