@@ -1,4 +1,4 @@
-use core::num::{NonZero, NonZeroUsize};
+use core::num::NonZeroUsize;
 use core::ops::Mul;
 
 use crate::enums::KzgError;
@@ -126,7 +126,7 @@ fn evaluate_polynomial_in_evaluation_form(
     batch_inversion(
         &mut inverses,
         &inverses_in,
-        NonZero::new(NUM_FIELD_ELEMENTS_PER_BLOB).unwrap(),
+        NonZeroUsize::new(NUM_FIELD_ELEMENTS_PER_BLOB).unwrap(),
     )?;
 
     let mut out = Scalar::zero();
@@ -377,7 +377,7 @@ mod tests {
     const VERIFY_KZG_PROOF_TESTS: &str = "tests/verify_kzg_proof/*/*";
     const VERIFY_BLOB_KZG_PROOF_TESTS: &str = "tests/verify_blob_kzg_proof/*/*";
 
-    #[derive(Deserialize)]
+    #[derive(Debug, Deserialize)]
     pub struct Input<'a> {
         commitment: &'a str,
         z: &'a str,
@@ -403,14 +403,13 @@ mod tests {
         }
     }
 
-    #[derive(Deserialize)]
-    pub struct Test<'a> {
-        #[serde(borrow)]
-        pub input: Input<'a>,
+    #[derive(Debug, Deserialize)]
+    pub struct Test<I> {
+        pub input: I,
         output: Option<bool>,
     }
 
-    impl Test<'_> {
+    impl<I> Test<I> {
         pub fn get_output(&self) -> Option<bool> {
             self.output
         }
@@ -426,7 +425,7 @@ mod tests {
             .collect();
         for test_file in test_files {
             let yaml_data = fs::read_to_string(test_file.clone()).unwrap();
-            let test: Test = serde_yaml::from_str(&yaml_data).unwrap();
+            let test: Test<Input> = serde_yaml::from_str(&yaml_data).unwrap();
             let (Ok(commitment), Ok(z), Ok(y), Ok(proof)) = (
                 test.input.get_commitment(),
                 test.input.get_z(),
@@ -450,7 +449,7 @@ mod tests {
         }
     }
 
-    #[derive(Deserialize)]
+    #[derive(Debug, Deserialize)]
     pub struct BlobInput<'a> {
         blob: &'a str,
         commitment: &'a str,
@@ -471,19 +470,6 @@ mod tests {
         }
     }
 
-    #[derive(Deserialize)]
-    pub struct BlobTest<'a> {
-        #[serde(borrow)]
-        pub input: BlobInput<'a>,
-        output: Option<bool>,
-    }
-
-    impl BlobTest<'_> {
-        pub fn get_output(&self) -> Option<bool> {
-            self.output
-        }
-    }
-
     #[test]
     #[cfg(feature = "cache")]
     fn test_verify_blob_kzg_proof() {
@@ -494,7 +480,7 @@ mod tests {
             .collect();
         for test_file in test_files {
             let yaml_data = fs::read_to_string(test_file.clone()).unwrap();
-            let test: BlobTest = serde_yaml::from_str(&yaml_data).unwrap();
+            let test: Test<BlobInput> = serde_yaml::from_str(&yaml_data).unwrap();
             let (Ok(blob), Ok(commitment), Ok(proof)) = (
                 test.input.get_blob(),
                 test.input.get_commitment(),
@@ -522,7 +508,7 @@ mod tests {
         let test_file = "tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_fb324bc819407148/data.yaml";
 
         let yaml_data = fs::read_to_string(test_file).unwrap();
-        let test: BlobTest = serde_yaml::from_str(&yaml_data).unwrap();
+        let test: Test<BlobInput> = serde_yaml::from_str(&yaml_data).unwrap();
         let blob = test.input.get_blob().unwrap();
         let commitment = safe_g1_affine_from_bytes(&test.input.get_commitment().unwrap()).unwrap();
 
@@ -540,7 +526,7 @@ mod tests {
         let test_file = "tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_19b3f3f8c98ea31e/data.yaml";
 
         let yaml_data = fs::read_to_string(test_file).unwrap();
-        let test: BlobTest = serde_yaml::from_str(&yaml_data).unwrap();
+        let test: Test<BlobInput> = serde_yaml::from_str(&yaml_data).unwrap();
         let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
         let blob = test.input.get_blob().unwrap();
         let polynomial = blob.as_polynomial().unwrap();
