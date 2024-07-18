@@ -82,8 +82,8 @@ impl KzgProof {
     }
 
     fn pairings_verify(a1: &G1Affine, a2: &G2Affine, b1: &G1Affine, b2: &G2Affine) -> bool {
-        let mul = multi_miller_loop(&[(&(-a1), &a2.clone().into()), (b1, &b2.clone().into())]).0;
-        MillerLoopResult(mul).final_exponentiation() == Gt::identity()
+        let result = multi_miller_loop(&[(&(-a1), &a2.clone().into()), (b1, &b2.clone().into())]);
+        result.final_exponentiation() == Gt::identity()
     }
 }
 
@@ -156,7 +156,6 @@ mod tests {
             };
 
             let result = KzgProof::verify_kzg_proof(&commitment, &z, &y, &proof, &kzg_settings);
-            println!("test_file: {:?}", test_file);
             match result {
                 Ok(result) => {
                     assert_eq!(result, test.get_output().unwrap_or_else(|| false));
