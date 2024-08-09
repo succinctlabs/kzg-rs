@@ -28,6 +28,18 @@ use crate::{
 const TRUSTED_SETUP_FILE: &str = include_str!("trusted_setup.txt");
 
 #[cfg(feature = "cache")]
+pub const fn get_roots_of_unity() -> &'static [Scalar] {
+    const ROOT_OF_UNITY_BYTES: &[u8] = include_bytes!("roots_of_unity.bin");
+    let roots_of_unity: &[Scalar] = unsafe {
+        transmute(slice::from_raw_parts(
+            ROOT_OF_UNITY_BYTES.as_ptr(),
+            NUM_ROOTS_OF_UNITY,
+        ))
+    };
+    roots_of_unity
+}
+
+#[cfg(feature = "cache")]
 pub const fn get_g1_points() -> &'static [G1Affine<Bls12381>] {
     const G1_BYTES: &[u8] = include_bytes!("g1.bin");
     let g1: &[G1Affine<Bls12381>] =
