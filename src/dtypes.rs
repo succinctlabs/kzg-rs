@@ -1,7 +1,11 @@
 use crate::enums::KzgError;
 use crate::hex_to_bytes;
+use crate::kzg_proof::safe_scalar_affine_from_bytes;
+use crate::{BYTES_PER_BLOB, BYTES_PER_FIELD_ELEMENT};
 
 use alloc::string::ToString;
+use zkvm_pairings::fp::Bls12381;
+use zkvm_pairings::fr::Fr;
 
 macro_rules! define_bytes_type {
     ($name:ident, $size:expr) => {
@@ -35,6 +39,18 @@ macro_rules! define_bytes_type {
 
 define_bytes_type!(Bytes32, 32);
 define_bytes_type!(Bytes48, 48);
+define_bytes_type!(Blob, BYTES_PER_BLOB);
+
+impl Blob {
+    pub fn as_polynomial(&self) -> Result<Vec<Fr<Bls12381>>, KzgError> {
+        self.0
+            .chunks(BYTES_PER_FIELD_ELEMENT)
+            .map(|slice| {
+                Bytes32::from_slice(slice).and_then(|bytes| safe_scalar_affine_from_bytes(&bytes))
+            })
+            .collect()
+    }
+}
 
 #[cfg(test)]
 mod tests {

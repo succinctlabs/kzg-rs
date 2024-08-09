@@ -10,10 +10,10 @@ use alloc::{
     sync::Arc,
     vec::Vec,
 };
-// use bls12_381::{G1Affine, G2Affine};
 use once_cell::race::OnceBox;
 use zkvm_pairings::{
     fp::Bls12381,
+    fr::Fr,
     g1::{G1Affine, G1Element},
     g2::{G2Affine, G2Element},
     pairings::verify_pairing,
@@ -46,6 +46,7 @@ pub const fn get_g2_points() -> &'static [G2Affine<Bls12381>] {
 #[cfg(feature = "cache")]
 pub const fn get_kzg_settings() -> KzgSettings {
     KzgSettings {
+        roots_of_unity: get_roots_of_unity(),
         max_width: 16,
         g1_points: get_g1_points(),
         g2_points: get_g2_points(),
@@ -54,6 +55,7 @@ pub const fn get_kzg_settings() -> KzgSettings {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KzgSettings {
+    pub(crate) roots_of_unity: &'static [Fr<Bls12381>],
     pub(crate) max_width: usize,
     pub(crate) g1_points: &'static [G1Affine<Bls12381>],
     pub(crate) g2_points: &'static [G2Affine<Bls12381>],
