@@ -20,7 +20,8 @@ use zkvm_pairings::g2::G2Projective;
 use zkvm_pairings::{g1::G1Affine, g2::G2Affine, pairings::verify_pairing};
 
 fn safe_g1_affine_from_bytes(bytes: &Bytes48) -> Result<G1Affine<Bls12381>, KzgError> {
-    let g1 = Bls12381::from_compressed_unchecked(bytes.clone().0.as_ref());
+    println!("Safe G1 Affine bytes [NEW]: {:?}", bytes.0);
+    let g1 = G1Affine::<Bls12381>::from_compressed(&bytes.0);
     if g1.is_none().into() {
         return Err(KzgError::BadArgs(
             "Failed to parse G1Affine<Bls12381> from bytes".to_string(),

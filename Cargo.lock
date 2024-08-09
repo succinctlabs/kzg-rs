@@ -883,7 +883,7 @@ dependencies = [
 [[package]]
 name = "sp1-derive"
 version = "1.1.1"
-source = "git+https://github.com/succinctlabs/sp1?branch=experimental#a615855c4c2d355aa02145cfc643b6848dc67c08"
+source = "git+https://github.com/succinctlabs/sp1?branch=experimental#7b11008d05023cadb9def590e50344cd1bbea303"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -893,7 +893,7 @@ dependencies = [
 [[package]]
 name = "sp1-lib"
 version = "1.1.1"
-source = "git+https://github.com/succinctlabs/sp1?branch=experimental#a615855c4c2d355aa02145cfc643b6848dc67c08"
+source = "git+https://github.com/succinctlabs/sp1?branch=experimental#7b11008d05023cadb9def590e50344cd1bbea303"
 dependencies = [
  "anyhow",
  "bincode",
@@ -904,7 +904,7 @@ dependencies = [
 [[package]]
 name = "sp1-zkvm"
 version = "1.1.1"
-source = "git+https://github.com/succinctlabs/sp1?branch=experimental#a615855c4c2d355aa02145cfc643b6848dc67c08"
+source = "git+https://github.com/succinctlabs/sp1?branch=experimental#7b11008d05023cadb9def590e50344cd1bbea303"
 dependencies = [
  "bincode",
  "cfg-if",
@@ -1130,7 +1130,7 @@ dependencies = [
 [[package]]
 name = "zkvm-pairings"
 version = "0.1.0"
-source = "git+https://github.com/0xWOLAND/zkvm-pairings?branch=bhargav/refactor#4334d49f6c967c1762cfa5fb8b7906a474422e05"
+source = "git+https://github.com/0xWOLAND/zkvm-pairings?branch=bhargav/refactor#c43759102a86f73b848b838e9d7d0c1e72c9f886"
 dependencies = [
  "byteorder",
  "cfg-if",
