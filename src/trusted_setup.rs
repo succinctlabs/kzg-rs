@@ -22,15 +22,15 @@ use zkvm_pairings::{
 use crate::{
     consts::{BYTES_PER_G1_POINT, BYTES_PER_G2_POINT},
     enums::KzgError,
-    hex_to_bytes, NUM_G1_POINTS, NUM_G2_POINTS,
+    hex_to_bytes, NUM_G1_POINTS, NUM_G2_POINTS, NUM_ROOTS_OF_UNITY,
 };
 
 const TRUSTED_SETUP_FILE: &str = include_str!("trusted_setup.txt");
 
 #[cfg(feature = "cache")]
-pub const fn get_roots_of_unity() -> &'static [Scalar] {
+pub const fn get_roots_of_unity() -> &'static [Fr<Bls12381>] {
     const ROOT_OF_UNITY_BYTES: &[u8] = include_bytes!("roots_of_unity.bin");
-    let roots_of_unity: &[Scalar] = unsafe {
+    let roots_of_unity: &[Fr<Bls12381>] = unsafe {
         transmute(slice::from_raw_parts(
             ROOT_OF_UNITY_BYTES.as_ptr(),
             NUM_ROOTS_OF_UNITY,
