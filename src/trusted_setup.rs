@@ -10,8 +10,14 @@ use alloc::{
     sync::Arc,
     vec::Vec,
 };
-use bls12_381::{G1Affine, G2Affine};
+// use bls12_381::{G1Affine, G2Affine};
 use once_cell::race::OnceBox;
+use zkvm_pairings::{
+    fp::Bls12381,
+    g1::{G1Affine, G1Element},
+    g2::{G2Affine, G2Element},
+    pairings::verify_pairing,
+};
 
 use crate::{
     consts::{BYTES_PER_G1_POINT, BYTES_PER_G2_POINT},
@@ -22,17 +28,17 @@ use crate::{
 const TRUSTED_SETUP_FILE: &str = include_str!("trusted_setup.txt");
 
 #[cfg(feature = "cache")]
-pub const fn get_g1_points() -> &'static [G1Affine] {
+pub const fn get_g1_points() -> &'static [G1Affine<Bls12381>] {
     const G1_BYTES: &[u8] = include_bytes!("g1.bin");
-    let g1: &[G1Affine] =
+    let g1: &[G1Affine<Bls12381>] =
         unsafe { transmute(slice::from_raw_parts(G1_BYTES.as_ptr(), NUM_G1_POINTS)) };
     g1
 }
 
 #[cfg(feature = "cache")]
-pub const fn get_g2_points() -> &'static [G2Affine] {
+pub const fn get_g2_points() -> &'static [G2Affine<Bls12381>] {
     const G2_BYTES: &[u8] = include_bytes!("g2.bin");
-    let g2: &[G2Affine] =
+    let g2: &[G2Affine<Bls12381>] =
         unsafe { transmute(slice::from_raw_parts(G2_BYTES.as_ptr(), NUM_G1_POINTS)) };
     g2
 }
@@ -49,8 +55,8 @@ pub const fn get_kzg_settings() -> KzgSettings {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KzgSettings {
     pub(crate) max_width: usize,
-    pub(crate) g1_points: &'static [G1Affine],
-    pub(crate) g2_points: &'static [G2Affine],
+    pub(crate) g1_points: &'static [G1Affine<Bls12381>],
+    pub(crate) g2_points: &'static [G2Affine<Bls12381>],
 }
 
 #[derive(Debug, Clone, Default, Eq)]
@@ -100,8 +106,8 @@ impl EnvKzgSettings {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KzgSettingsOwned {
     pub max_width: usize,
-    pub g1_points: [G1Affine; NUM_G1_POINTS],
-    pub g2_points: [G2Affine; NUM_G2_POINTS],
+    pub g1_points: [G1Affine<Bls12381>; NUM_G1_POINTS],
+    pub g2_points: [G2Affine<Bls12381>; NUM_G2_POINTS],
 }
 
 impl KzgSettings {
@@ -153,16 +159,18 @@ pub fn load_trusted_setup_file_brute() -> Result<KzgSettingsOwned, KzgError> {
     }
     let max_width = 1 << max_scale;
 
-    let mut g1_points: [G1Affine; NUM_G1_POINTS] = [G1Affine::identity(); NUM_G1_POINTS];
-    let mut g2_points: [G2Affine; NUM_G2_POINTS] = [G2Affine::identity(); NUM_G2_POINTS];
+    let mut g1_points: [G1Affine<Bls12381>; NUM_G1_POINTS] =
+        [G1Affine::<Bls12381>::identity(); NUM_G1_POINTS];
+    let mut g2_points: [G2Affine<Bls12381>; NUM_G2_POINTS] =
+        [G2Affine::<Bls12381>::identity(); NUM_G2_POINTS];
 
     _g1_points.iter().enumerate().for_each(|(i, bytes)| {
-        g1_points[i] = G1Affine::from_compressed_unchecked(bytes)
+        g1_points[i] = <Bls12381 as G1Element>::from_compressed_unchecked(bytes)
             .expect("load_trusted_setup Invalid g1 bytes");
     });
 
     _g2_points.iter().enumerate().for_each(|(i, bytes)| {
-        g2_points[i] = G2Affine::from_compressed_unchecked(bytes)
+        g2_points[i] = <Bls12381 as G2Element>::from_compressed_unchecked(bytes)
             .expect("load_trusted_setup Invalid g2 bytes");
     });
 
@@ -178,11 +186,13 @@ pub fn load_trusted_setup_file_brute() -> Result<KzgSettingsOwned, KzgError> {
     })
 }
 
-fn bit_reversal_permutation(g1_points: &[G1Affine]) -> Result<[G1Affine; NUM_G1_POINTS], KzgError> {
+fn bit_reversal_permutation(
+    g1_points: &[G1Affine<Bls12381>],
+) -> Result<[G1Affine<Bls12381>; NUM_G1_POINTS], KzgError> {
     let n = g1_points.len();
     assert!(n.is_power_of_two(), "n must be a power of 2");
 
-    let mut bit_reversed_permutation: [G1Affine; NUM_G1_POINTS] =
+    let mut bit_reversed_permutation: [G1Affine<Bls12381>; NUM_G1_POINTS] =
         [G1Affine::identity(); NUM_G1_POINTS];
     let unused_bit_len = g1_points.len().leading_zeros();
 
@@ -194,15 +204,21 @@ fn bit_reversal_permutation(g1_points: &[G1Affine]) -> Result<[G1Affine; NUM_G1_
     Ok(bit_reversed_permutation)
 }
 
-fn pairings_verify(a1: G1Affine, a2: G2Affine, b1: G1Affine, b2: G2Affine) -> bool {
-    let pairing1 = bls12_381::pairing(&a1, &a2);
-    let pairing2 = bls12_381::pairing(&b1, &b2);
-    pairing1 == pairing2
+fn pairings_verify(
+    a1: G1Affine<Bls12381>,
+    a2: G2Affine<Bls12381>,
+    b1: G1Affine<Bls12381>,
+    b2: G2Affine<Bls12381>,
+) -> bool {
+    // let pairing1 = bls12_381::pairing(&a1, &a2);
+    // let pairing2 = bls12_381::pairing(&b1, &b2);
+    // pairing1 == pairing2
+    verify_pairing(&[a1, b1], &[a2, b2])
 }
 
 fn is_trusted_setup_in_lagrange_form(
-    g1_points: &[G1Affine],
-    g2_points: &[G2Affine],
+    g1_points: &[G1Affine<Bls12381>],
+    g2_points: &[G2Affine<Bls12381>],
 ) -> Result<(), KzgError> {
     let n1 = g1_points.len();
     let n2 = g2_points.len();

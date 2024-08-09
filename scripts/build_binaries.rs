@@ -1,7 +1,8 @@
 use std::{fs, io::Write};
 
-use bls12_381::{G1Affine, G2Affine};
+// use bls12_381::{G1Affine, G2Affine};
 use kzg_rs::{load_trusted_setup_file_brute, KzgSettingsOwned};
+use zkvm_pairings::{fp::Bls12381, g1::G1Affine, g2::G2Affine};
 
 fn main() {
     let KzgSettingsOwned {
@@ -14,11 +15,13 @@ fn main() {
     let mut g2_bytes: Vec<u8> = Vec::new();
 
     g1_points.iter().for_each(|&v| {
-        g1_bytes.extend_from_slice(unsafe { &std::mem::transmute::<G1Affine, [u8; 104]>(v) });
+        g1_bytes
+            .extend_from_slice(unsafe { &std::mem::transmute::<G1Affine<Bls12381>, [u8; 104]>(v) });
     });
 
     g2_points.iter().for_each(|&v| {
-        g2_bytes.extend_from_slice(unsafe { &std::mem::transmute::<G2Affine, [u8; 200]>(v) });
+        g2_bytes
+            .extend_from_slice(unsafe { &std::mem::transmute::<G2Affine<Bls12381>, [u8; 200]>(v) });
     });
 
     let mut g1_file = fs::OpenOptions::new()

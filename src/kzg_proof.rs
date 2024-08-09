@@ -3,10 +3,14 @@ use crate::enums::KzgError;
 use crate::trusted_setup::KzgSettings;
 
 use alloc::{string::ToString, vec::Vec};
-use bls12_381::{multi_miller_loop, G1Affine, G2Affine, Gt, MillerLoopResult, Scalar};
+use zkvm_pairings::fp::Bls12381;
+// use bls12_381::{multi_miller_loop, G1Affine, G2Affine, Gt, MillerLoopResult, Scalar};
+use zkvm_pairings::fr::Fr;
+use zkvm_pairings::g1::G1Element;
+use zkvm_pairings::{g1::G1Affine, g2::G2Affine, pairings::verify_pairing};
 
-fn safe_g1_affine_from_bytes(bytes: &Bytes48) -> Result<G1Affine, KzgError> {
-    let g1 = G1Affine::from_compressed(&(bytes.clone().into()));
+fn safe_g1_affine_from_bytes(bytes: &Bytes48) -> Result<G1Affine<Bls12381>, KzgError> {
+    let g1 = Bls12381::from_compressed_unchecked(bytes.clone().0.as_ref());
     if g1.is_none().into() {
         return Err(KzgError::BadArgs(
             "Failed to parse G1Affine from bytes".to_string(),
@@ -15,7 +19,7 @@ fn safe_g1_affine_from_bytes(bytes: &Bytes48) -> Result<G1Affine, KzgError> {
     Ok(g1.unwrap())
 }
 
-fn safe_scalar_affine_from_bytes(bytes: &Bytes32) -> Result<Scalar, KzgError> {
+fn safe_scalar_affine_from_bytes(bytes: &Bytes32) -> Result<Fr<Bls12381>, KzgError> {
     let lendian: [u8; 32] = Into::<[u8; 32]>::into(bytes.clone())
         .iter()
         .rev()
@@ -23,7 +27,7 @@ fn safe_scalar_affine_from_bytes(bytes: &Bytes32) -> Result<Scalar, KzgError> {
         .collect::<Vec<u8>>()
         .try_into()
         .unwrap();
-    let scalar = Scalar::from_bytes(&lendian);
+    let scalar = Fr::<Bls12381>::from_bytes(&lendian);
     if scalar.is_none().into() {
         return Err(KzgError::BadArgs(
             "Failed to parse G1Affine from bytes".to_string(),
@@ -66,24 +70,27 @@ impl KzgProof {
                 return Err(e);
             }
         };
-
-        let g2_x = G2Affine::generator() * z;
+        let g2_x = G2Affine::<Bls12381>::generator() * z;
         let x_minus_z = kzg_settings.g2_points[1] - g2_x;
 
-        let g1_y = G1Affine::generator() * y;
+        let g1_y = G1Affine::<Bls12381>::generator() * y;
         let p_minus_y = commitment - g1_y;
 
         Ok(Self::pairings_verify(
-            &p_minus_y.into(),
+            &p_minus_y,
             &G2Affine::generator(),
             &proof,
-            &x_minus_z.into(),
+            &x_minus_z,
         ))
     }
 
-    fn pairings_verify(a1: &G1Affine, a2: &G2Affine, b1: &G1Affine, b2: &G2Affine) -> bool {
-        let result = multi_miller_loop(&[(&(-a1), &a2.clone().into()), (b1, &b2.clone().into())]);
-        result.final_exponentiation() == Gt::identity()
+    fn pairings_verify(
+        a1: &G1Affine<Bls12381>,
+        a2: &G2Affine<Bls12381>,
+        b1: &G1Affine<Bls12381>,
+        b2: &G2Affine<Bls12381>,
+    ) -> bool {
+        verify_pairing(&[-*a1, *b1], &[*a2, *b2])
     }
 }
 
@@ -143,6 +150,7 @@ mod tests {
             .map(|x| x.unwrap())
             .collect();
         for test_file in test_files {
+            println!("Test file: {:?}", test_file);
             let yaml_data = fs::read_to_string(test_file.clone()).unwrap();
             let test: Test = serde_yaml::from_str(&yaml_data).unwrap();
             let (Ok(commitment), Ok(z), Ok(y), Ok(proof)) = (
@@ -162,7 +170,7 @@ mod tests {
                 }
                 Err(e) => {
                     assert!(test.get_output().is_none());
-                    eprintln!("Error: {:?}", e);
+                    // eprintln!("Error: {:?}", e);
                 }
             }
         }
