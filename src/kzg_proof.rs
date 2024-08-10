@@ -20,7 +20,6 @@ use zkvm_pairings::g2::G2Projective;
 use zkvm_pairings::{g1::G1Affine, g2::G2Affine, pairings::verify_pairing};
 
 fn safe_g1_affine_from_bytes(bytes: &Bytes48) -> Result<G1Affine<Bls12381>, KzgError> {
-    println!("Safe G1 Affine bytes [NEW]: {:?}", bytes.0);
     let g1 = G1Affine::<Bls12381>::from_compressed(&bytes.0);
     if g1.is_none().into() {
         return Err(KzgError::BadArgs(
@@ -101,17 +100,28 @@ impl KzgProof {
         proof_bytes: &Bytes48,
         kzg_settings: &KzgSettings,
     ) -> Result<bool, KzgError> {
+        println!("cycle-tracker-start: getting g1 points from bytes");
         let commitment = safe_g1_affine_from_bytes(commitment_bytes)?;
         let polynomial = blob.as_polynomial()?;
         let proof = safe_g1_affine_from_bytes(proof_bytes)?;
+        println!("cycle-tracker-end: getting g1 points from bytes");
 
+        println!("cycle-tracker-start: compute challenge");
         // Compute challenge for the blob/commitment
         let evaluation_challenge = compute_challenge(&blob, &commitment)?;
+        println!("cycle-tracker-end: compute challenge");
 
+        println!("cycle-tracker-start: evaluate polynomial");
         let y =
             evaluate_polynomial_in_evaluation_form(polynomial, evaluation_challenge, kzg_settings)?;
+        println!("cycle-tracker-end: evaluate polynomial");
 
-        verify_kzg_proof_impl(commitment, evaluation_challenge, y, proof, kzg_settings)
+        println!("cycle-tracker-start: verify kzg proof impl");
+        let result =
+            verify_kzg_proof_impl(commitment, evaluation_challenge, y, proof, kzg_settings)?;
+        println!("cycle-tracker-end: verify kzg proof impl");
+
+        Ok(result)
     }
 
     // TODO(bharghav): Need to implement msm_variable_base for G1Affine and don't convery to G1Projective
@@ -288,6 +298,7 @@ fn scalar_from_u64_array_unchecked(array: [u64; 4]) -> Fr<Bls12381> {
 }
 
 /// Evaluates a polynomial in evaluation form at a given point
+/// TODO: Accelerate this with Scalar instructions.
 fn evaluate_polynomial_in_evaluation_form(
     polynomial: Vec<Fr<Bls12381>>,
     x: Fr<Bls12381>,
@@ -586,4 +597,18 @@ mod tests {
             }
         }
     }
+}
+
+#[test]
+fn test_bls12381_decompress() {
+    let bytes = [
+        177, 11, 250, 44, 218, 34, 47, 226, 27, 205, 166, 212, 64, 29, 74, 0, 209, 67, 56, 176,
+        204, 46, 118, 183, 21, 150, 253, 96, 43, 46, 41, 95, 241, 94, 86, 13, 238, 240, 167, 114,
+        150, 55, 101, 246, 138, 122, 181, 20,
+    ];
+
+    let g1 = G1Affine::<Bls12381>::from_compressed(&bytes).unwrap();
+    println!("{:?}", g1);
+
+    safe_g1_affine_from_bytes(&Bytes48(bytes)).unwrap();
 }

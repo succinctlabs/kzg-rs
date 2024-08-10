@@ -1130,7 +1130,7 @@ dependencies = [
 [[package]]
 name = "zkvm-pairings"
 version = "0.1.0"
-source = "git+https://github.com/0xWOLAND/zkvm-pairings?branch=bhargav/refactor#c43759102a86f73b848b838e9d7d0c1e72c9f886"
+source = "git+https://github.com/0xWOLAND/zkvm-pairings?branch=bhargav/refactor#ac77aa749049f0ae2803dc10fc3959cc7cd84932"
 dependencies = [
  "byteorder",
  "cfg-if",
