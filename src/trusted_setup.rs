@@ -60,6 +60,7 @@ pub const fn get_kzg_settings() -> KzgSettings {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[repr(C, align(4))]
 pub struct KzgSettings {
     pub(crate) roots_of_unity: &'static [Scalar],
     pub(crate) g1_points: &'static [G1Affine],
@@ -118,7 +119,7 @@ pub struct KzgSettingsOwned {
 }
 
 impl KzgSettings {
-    #[cfg(feature = "cache")]
+    // #[cfg(feature = "cache")]
     pub fn load_trusted_setup_file() -> Result<Self, KzgError> {
         Ok(get_kzg_settings())
     }
