@@ -404,13 +404,19 @@ impl KzgProof {
         let proof = safe_g1_affine_from_bytes(proof_bytes)?;
 
         // Compute challenge for the blob/commitment
+        println!("cycle-tracker-start: compute_challenge");
         let evaluation_challenge = compute_challenge(&blob, &commitment)?;
+        println!("cycle-tracker-end: compute_challenge");
 
-        // let y =
-        //     evaluate_polynomial_in_evaluation_form(polynomial, evaluation_challenge, kzg_settings)?;
+        println!("cycle-tracker-start: evaluate_polynomial_in_evaluation_form");
+        let y =
+            evaluate_polynomial_in_evaluation_form(polynomial, evaluation_challenge, kzg_settings)?;
+        println!("cycle-tracker-end: evaluate_polynomial_in_evaluation_form");
 
-        // verify_kzg_proof_impl(commitment, evaluation_challenge, y, proof, kzg_settings)
-        Ok(true)
+        println!("cycle-tracker-start: verify_kzg_proof_impl");
+        let out = verify_kzg_proof_impl(commitment, evaluation_challenge, y, proof, kzg_settings);
+        println!("cycle-tracker-end: verify_kzg_proof_impl");
+        out
     }
 
     pub fn verify_blob_kzg_proof_batch(
@@ -522,17 +528,16 @@ pub mod tests {
         }
     }
 
-    #[test]
+    // #[test]
     #[cfg(feature = "cache")]
-    fn test_verify_kzg_proof() {
+    pub fn test_verify_kzg_proof() {
+        use crate::VERIFY_KZG_PROOF_TESTS;
+
         let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
-        let test_files: Vec<PathBuf> = glob::glob(VERIFY_KZG_PROOF_TESTS)
-            .unwrap()
-            .map(|x| x.unwrap())
-            .collect();
-        for test_file in test_files {
-            let yaml_data = fs::read_to_string(test_file.clone()).unwrap();
-            let test: Test<Input> = serde_yaml::from_str(&yaml_data).unwrap();
+        let test_files = VERIFY_KZG_PROOF_TESTS;
+
+        for (test_file, data) in test_files {
+            let test: Test<Input> = serde_yaml::from_str(data).unwrap();
             let (Ok(commitment), Ok(z), Ok(y), Ok(proof)) = (
                 test.input.get_commitment(),
                 test.input.get_z(),
@@ -543,7 +548,9 @@ pub mod tests {
                 continue;
             };
 
+            println!("cycle-tracker-start: verify_kzg_proof");
             let result = KzgProof::verify_kzg_proof(&commitment, &z, &y, &proof, &kzg_settings);
+            println!("cycle-tracker-end: verify_kzg_proof");
             match result {
                 Ok(result) => {
                     assert_eq!(result, test.get_output().unwrap_or(false));
