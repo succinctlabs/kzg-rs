@@ -113,42 +113,32 @@ pub fn evaluate_polynomial_in_evaluation_form(
     let mut inverses = vec![Scalar::default(); NUM_FIELD_ELEMENTS_PER_BLOB];
     let roots_of_unity = kzg_settings.roots_of_unity;
 
-    println!("a");
     for i in 0..NUM_FIELD_ELEMENTS_PER_BLOB {
         // If the point to evaluate at is one of the evaluation points by which
         // the polynomial is given, we can just return the result directly.
         // Note that special-casing this is necessary, as the formula below
         // would divide by zero otherwise.
-        println!("b");
         if x == roots_of_unity[i] {
-            println!("c");
             return Ok(polynomial[i]);
         }
-        println!("d");
         inverses_in[i] = x - roots_of_unity[i];
     }
 
-    println!("e");
     batch_inversion(
         &mut inverses,
         &inverses_in,
         NonZeroUsize::new(NUM_FIELD_ELEMENTS_PER_BLOB).unwrap(),
     )?;
 
-    println!("f");
     let mut out = Scalar::zero();
 
-    println!("g");
     for i in 0..NUM_FIELD_ELEMENTS_PER_BLOB {
-        println!("h");
         out += (inverses[i] * roots_of_unity[i]) * polynomial[i];
     }
 
-    println!("i");
     out *= Scalar::from(NUM_FIELD_ELEMENTS_PER_BLOB as u64)
         .invert()
         .unwrap();
-    println!("j");
     out *= x.pow(&[NUM_FIELD_ELEMENTS_PER_BLOB as u64, 0, 0, 0]) - Scalar::one();
 
     Ok(out)
@@ -560,7 +550,6 @@ pub mod tests {
                 }
                 Err(e) => {
                     assert!(test.get_output().is_none());
-                    eprintln!("Error: {:?}", e);
                 }
             }
         }
@@ -614,7 +603,6 @@ pub mod tests {
     //             }
     //             Err(e) => {
     //                 assert!(test.get_output().is_none());
-    //                 eprintln!("Error: {:?}", e);
     //             }
     //         }
     //     }
@@ -654,7 +642,6 @@ pub mod tests {
         let test_files = VERIFY_BLOB_KZG_PROOF_BATCH_TESTS;
 
         for (test_file, data) in test_files {
-            println!("test_file: {:?}", test_file);
             let test: Test<BlobBatchInput> = serde_yaml::from_str(data).unwrap();
             let (Ok(blobs), Ok(commitments), Ok(proofs)) = (
                 test.input.get_blobs(),
@@ -665,21 +652,18 @@ pub mod tests {
                 continue;
             };
 
-            println!("cycle-tracker-start: test_verify_blob_kzg_proof_batch");
             let result = KzgProof::verify_blob_kzg_proof_batch(
                 vec![blobs],
                 vec![commitments],
                 vec![proofs],
                 &kzg_settings,
             );
-            println!("cycle-tracker-end: test_verify_blob_kzg_proof_batch");
             match result {
                 Ok(result) => {
                     assert_eq!(result, test.get_output().unwrap_or(false));
                 }
                 Err(e) => {
                     assert!(test.get_output().is_none());
-                    eprintln!("Error: {:?}", e);
                 }
             }
         }
