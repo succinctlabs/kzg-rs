@@ -344,10 +344,17 @@ impl KzgProof {
         let g1_y = G1Affine::generator() * y;
         let p_minus_y = commitment - g1_y;
 
-        Ok(
-            pairing(&p_minus_y.into(), &G2Affine::generator())
-                == pairing(&proof, &x_minus_z.into()),
-        )
+        Ok(Self::pairings_verify(
+            &p_minus_y.into(),
+            &G2Affine::generator(),
+            &proof,
+            &x_minus_z.into(),
+        ))
+    }
+
+    fn pairings_verify(a1: &G1Affine, a2: &G2Affine, b1: &G1Affine, b2: &G2Affine) -> bool {
+        let result = multi_miller_loop(&[(&(-a1), &a2.clone().into()), (b1, &b2.clone().into())]);
+        result.final_exponentiation() == Gt::identity()
     }
 
     pub fn verify_kzg_proof_batch(
@@ -470,7 +477,7 @@ impl KzgProof {
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(all(feature = "std", feature = "cache"))]
 #[cfg(test)]
 pub mod tests {
 
