@@ -1,4 +1,4 @@
-// #![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 #[macro_use]
 extern crate alloc;
@@ -14,7 +14,7 @@ mod msm;
 pub mod trusted_setup;
 
 use alloc::vec::Vec;
-use bls12_381::{G1Affine, G2Affine};
+use bls12_381::{multi_miller_loop, G1Affine, G2Affine, G2Prepared, Gt};
 pub use consts::*;
 pub use dtypes::*;
 pub use kzg_proof::KzgProof;
@@ -29,7 +29,7 @@ pub(crate) fn hex_to_bytes(hex_str: &str) -> Result<Vec<u8>, KzgError> {
 }
 
 pub(crate) fn pairings_verify(a1: G1Affine, a2: G2Affine, b1: G1Affine, b2: G2Affine) -> bool {
-    let pairing1 = bls12_381::pairing(&a1, &a2);
-    let pairing2 = bls12_381::pairing(&b1, &b2);
-    pairing1 == pairing2
+    multi_miller_loop(&[(&-a1, &G2Prepared::from(a2)), (&b1, &G2Prepared::from(b2))])
+        .final_exponentiation()
+        == Gt::identity()
 }
