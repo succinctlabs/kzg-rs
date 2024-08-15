@@ -1,3 +1,4 @@
+use alloc::vec::Vec;
 use bls12_381::{G1Projective, Scalar};
 
 fn ln_without_floats(a: usize) -> usize {
