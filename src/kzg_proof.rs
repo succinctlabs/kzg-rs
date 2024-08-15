@@ -11,7 +11,7 @@ use crate::{
 };
 
 use alloc::{string::ToString, vec::Vec};
-use bls12_381::{pairing, G1Affine, G1Projective, G2Affine, G2Projective, Scalar};
+use bls12_381::{G1Affine, G1Projective, G2Affine, G2Projective, Scalar};
 use ff::derive::sbb;
 use sha2::{Digest, Sha256};
 
@@ -344,17 +344,12 @@ impl KzgProof {
         let g1_y = G1Affine::generator() * y;
         let p_minus_y = commitment - g1_y;
 
-        Ok(Self::pairings_verify(
-            &p_minus_y.into(),
-            &G2Affine::generator(),
-            &proof,
-            &x_minus_z.into(),
+        Ok(pairings_verify(
+            p_minus_y.into(),
+            G2Affine::generator(),
+            proof,
+            x_minus_z.into(),
         ))
-    }
-
-    fn pairings_verify(a1: &G1Affine, a2: &G2Affine, b1: &G1Affine, b2: &G2Affine) -> bool {
-        let result = multi_miller_loop(&[(&(-a1), &a2.clone().into()), (b1, &b2.clone().into())]);
-        result.final_exponentiation() == Gt::identity()
     }
 
     pub fn verify_kzg_proof_batch(
@@ -527,12 +522,11 @@ pub mod tests {
 
     #[test]
     #[cfg(feature = "cache")]
-    pub fn test_verify_kzg_proof() {
+    fn test_verify_kzg_proof() {
         let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
         let test_files = VERIFY_KZG_PROOF_TESTS;
 
         for (test_file, data) in test_files {
-            println!("test_file: {:?}", test_file);
             let test: Test<Input> = serde_yaml::from_str(data).unwrap();
             let (Ok(commitment), Ok(z), Ok(y), Ok(proof)) = (
                 test.input.get_commitment(),
@@ -608,7 +602,7 @@ pub mod tests {
     }
 
     #[derive(Debug, Deserialize)]
-    pub struct BlobBatchInput<'a> {
+    struct BlobBatchInput<'a> {
         #[serde(borrow)]
         blob: &'a str,
         #[serde(borrow)]
@@ -633,7 +627,7 @@ pub mod tests {
 
     #[test]
     #[cfg(feature = "cache")]
-    pub fn test_verify_blob_kzg_proof_batch() {
+    fn test_verify_blob_kzg_proof_batch() {
         let test_files = VERIFY_BLOB_KZG_PROOF_BATCH_TESTS;
         let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
 
@@ -667,7 +661,7 @@ pub mod tests {
     }
 
     #[test]
-    pub fn test_compute_challenge() {
+    fn test_compute_challenge() {
         let data = include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_fb324bc819407148/data.yaml");
 
         let test: Test<BlobInput> = serde_yaml::from_str(data).unwrap();
@@ -684,7 +678,7 @@ pub mod tests {
 
     #[test]
     #[cfg(feature = "cache")]
-    pub fn test_evaluate_polynomial_in_evaluation_form() {
+    fn test_evaluate_polynomial_in_evaluation_form() {
         let data = include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_19b3f3f8c98ea31e/data.yaml");
 
         let test: Test<BlobInput> = serde_yaml::from_str(data).unwrap();
