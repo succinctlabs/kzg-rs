@@ -64,6 +64,7 @@ dependencies = [
 [[package]]
 name = "bls12_381"
 version = "0.8.0"
+source = "git+https://github.com/0xWOLAND/bls12_381/?branch=bhargav/experiment#1667d175c41fde5942de849f4938edc66107d6e9"
 dependencies = [
  "cfg-if",
  "ff",
@@ -480,7 +481,7 @@ dependencies = [
 [[package]]
 name = "sp1-lib"
 version = "1.1.1"
-source = "git+https://github.com/succinctlabs/sp1?branch=experimental#93db43847bd02deb8d78ffae25726f944a444aa0"
+source = "git+https://github.com/succinctlabs/sp1?branch=experimental#f9224d35e4b433baa7fe298cd8367219ac07914e"
 dependencies = [
  "anyhow",
  "bincode",

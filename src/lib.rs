@@ -10,6 +10,7 @@ pub mod consts;
 pub mod dtypes;
 pub mod enums;
 pub mod kzg_proof;
+mod msm;
 pub mod trusted_setup;
 
 use alloc::vec::Vec;

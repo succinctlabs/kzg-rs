@@ -2,6 +2,7 @@ use core::num::NonZeroUsize;
 use core::ops::Mul;
 
 use crate::enums::KzgError;
+use crate::msm::msm_variable_base;
 use crate::trusted_setup::KzgSettings;
 use crate::{
     dtypes::*, pairings_verify, BYTES_PER_BLOB, BYTES_PER_COMMITMENT, BYTES_PER_FIELD_ELEMENT,
@@ -365,7 +366,7 @@ impl KzgProof {
 
         // Compute \sum r^i * Proof_i
         let proofs = proofs.iter().map(Into::into).collect::<Vec<_>>();
-        let proof_lincomb = G1Projective::msm_variable_base(&proofs, &r_powers);
+        let proof_lincomb = msm_variable_base(&proofs, &r_powers);
 
         for i in 0..n {
             // Get [y_i]
@@ -377,9 +378,9 @@ impl KzgProof {
         }
 
         // Get \sum r^i z_i Proof_i
-        let proof_z_lincomb = G1Projective::msm_variable_base(&proofs, &r_times_z);
+        let proof_z_lincomb = msm_variable_base(&proofs, &r_times_z);
         // Get \sum r^i (C_i - [y_i])
-        let c_minus_y_lincomb = G1Projective::msm_variable_base(&c_minus_y, &r_powers);
+        let c_minus_y_lincomb = msm_variable_base(&c_minus_y, &r_powers);
 
         // Get C_minus_y_lincomb + proof_z_lincomb
         let rhs_g1 = c_minus_y_lincomb + proof_z_lincomb;
@@ -404,19 +405,11 @@ impl KzgProof {
         let proof = safe_g1_affine_from_bytes(proof_bytes)?;
 
         // Compute challenge for the blob/commitment
-        println!("cycle-tracker-start: compute_challenge");
         let evaluation_challenge = compute_challenge(&blob, &commitment)?;
-        println!("cycle-tracker-end: compute_challenge");
-
-        println!("cycle-tracker-start: evaluate_polynomial_in_evaluation_form");
         let y =
             evaluate_polynomial_in_evaluation_form(polynomial, evaluation_challenge, kzg_settings)?;
-        println!("cycle-tracker-end: evaluate_polynomial_in_evaluation_form");
 
-        println!("cycle-tracker-start: verify_kzg_proof_impl");
-        let out = verify_kzg_proof_impl(commitment, evaluation_challenge, y, proof, kzg_settings);
-        println!("cycle-tracker-end: verify_kzg_proof_impl");
-        out
+        verify_kzg_proof_impl(commitment, evaluation_challenge, y, proof, kzg_settings)
     }
 
     pub fn verify_blob_kzg_proof_batch(
@@ -478,17 +471,14 @@ impl KzgProof {
 }
 
 #[cfg(feature = "std")]
-// #[cfg(test)]
+#[cfg(test)]
 pub mod tests {
-    use crate::VERIFY_BLOB_KZG_PROOF_BATCH_TESTS;
 
     use super::*;
+    use crate::{
+        VERIFY_BLOB_KZG_PROOF_BATCH_TESTS, VERIFY_BLOB_KZG_PROOF_TESTS, VERIFY_KZG_PROOF_TESTS,
+    };
     use serde_derive::Deserialize;
-    use std::{fs, path::PathBuf};
-
-    const VERIFY_KZG_PROOF_TESTS: &str = "tests/verify_kzg_proof/*/*";
-    // const VERIFY_BLOB_KZG_PROOF_TESTS: &str = "tests/verify_blob_kzg_proof/*/*";
-    // const VERIFY_BLOB_KZG_PROOF_BATCH_TESTS: &str = "tests/verify_blob_kzg_proof_batch/*/*";
 
     #[derive(Debug, Deserialize)]
     pub struct Input<'a> {
@@ -528,15 +518,14 @@ pub mod tests {
         }
     }
 
-    // #[test]
+    #[test]
     #[cfg(feature = "cache")]
     pub fn test_verify_kzg_proof() {
-        use crate::VERIFY_KZG_PROOF_TESTS;
-
         let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
         let test_files = VERIFY_KZG_PROOF_TESTS;
 
         for (test_file, data) in test_files {
+            println!("test_file: {:?}", test_file);
             let test: Test<Input> = serde_yaml::from_str(data).unwrap();
             let (Ok(commitment), Ok(z), Ok(y), Ok(proof)) = (
                 test.input.get_commitment(),
@@ -548,9 +537,7 @@ pub mod tests {
                 continue;
             };
 
-            println!("cycle-tracker-start: verify_kzg_proof");
             let result = KzgProof::verify_kzg_proof(&commitment, &z, &y, &proof, &kzg_settings);
-            println!("cycle-tracker-end: verify_kzg_proof");
             match result {
                 Ok(result) => {
                     assert_eq!(result, test.get_output().unwrap_or(false));
@@ -583,37 +570,35 @@ pub mod tests {
         }
     }
 
-    // #[test]
-    // #[cfg(feature = "cache")]
-    // fn test_verify_blob_kzg_proof() {
-    //     let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
-    //     let test_files: Vec<PathBuf> = glob::glob(VERIFY_BLOB_KZG_PROOF_TESTS)
-    //         .unwrap()
-    //         .map(|x| x.unwrap())
-    //         .collect();
-    //     for test_file in test_files {
-    //         let yaml_data = fs::read_to_string(test_file.clone()).unwrap();
-    //         let test: Test<BlobInput> = serde_yaml::from_str(&yaml_data).unwrap();
-    //         let (Ok(blob), Ok(commitment), Ok(proof)) = (
-    //             test.input.get_blob(),
-    //             test.input.get_commitment(),
-    //             test.input.get_proof(),
-    //         ) else {
-    //             assert!(test.get_output().is_none());
-    //             continue;
-    //         };
+    #[test]
+    #[cfg(feature = "cache")]
+    fn test_verify_blob_kzg_proof() {
+        let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
+        let test_files = VERIFY_BLOB_KZG_PROOF_TESTS;
 
-    //         let result = KzgProof::verify_blob_kzg_proof(blob, &commitment, &proof, &kzg_settings);
-    //         match result {
-    //             Ok(result) => {
-    //                 assert_eq!(result, test.get_output().unwrap_or(false));
-    //             }
-    //             Err(e) => {
-    //                 assert!(test.get_output().is_none());
-    //             }
-    //         }
-    //     }
-    // }
+        for (test_file, data) in test_files {
+            println!("test_file: {:?}", test_file);
+            let test: Test<BlobInput> = serde_yaml::from_str(&data).unwrap();
+            let (Ok(blob), Ok(commitment), Ok(proof)) = (
+                test.input.get_blob(),
+                test.input.get_commitment(),
+                test.input.get_proof(),
+            ) else {
+                assert!(test.get_output().is_none());
+                continue;
+            };
+
+            let result = KzgProof::verify_blob_kzg_proof(blob, &commitment, &proof, &kzg_settings);
+            match result {
+                Ok(result) => {
+                    assert_eq!(result, test.get_output().unwrap_or(false));
+                }
+                Err(e) => {
+                    assert!(test.get_output().is_none());
+                }
+            }
+        }
+    }
 
     #[derive(Debug, Deserialize)]
     pub struct BlobBatchInput<'a> {
@@ -639,16 +624,14 @@ pub mod tests {
         }
     }
 
-    // #[test]
+    #[test]
     #[cfg(feature = "cache")]
     pub fn test_verify_blob_kzg_proof_batch() {
-        use crate::VERIFY_BLOB_KZG_PROOF_BATCH_TESTS;
-
+        let test_files = VERIFY_BLOB_KZG_PROOF_BATCH_TESTS;
         let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
 
-        let test_files = VERIFY_BLOB_KZG_PROOF_BATCH_TESTS;
-
         for (test_file, data) in test_files {
+            println!("test_file: {:?}", test_file);
             let test: Test<BlobBatchInput> = serde_yaml::from_str(data).unwrap();
             let (Ok(blobs), Ok(commitments), Ok(proofs)) = (
                 test.input.get_blobs(),
@@ -676,13 +659,11 @@ pub mod tests {
         }
     }
 
-    // #[test]
+    #[test]
     pub fn test_compute_challenge() {
-        // let test_file = "tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_fb324bc819407148/data.yaml";
-        let data = include_bytes!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_fb324bc819407148/data.yaml");
+        let data = include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_fb324bc819407148/data.yaml");
 
-        // let yaml_data = fs::read_to_string(test_file).unwrap();
-        let test: Test<BlobInput> = serde_yaml::from_slice(data).unwrap();
+        let test: Test<BlobInput> = serde_yaml::from_str(data).unwrap();
         let blob = test.input.get_blob().unwrap();
         let commitment = safe_g1_affine_from_bytes(&test.input.get_commitment().unwrap()).unwrap();
 
@@ -694,7 +675,7 @@ pub mod tests {
         )
     }
 
-    // #[test]
+    #[test]
     #[cfg(feature = "cache")]
     pub fn test_evaluate_polynomial_in_evaluation_form() {
         let data = include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_19b3f3f8c98ea31e/data.yaml");
