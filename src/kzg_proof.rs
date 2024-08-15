@@ -526,7 +526,7 @@ pub mod tests {
         let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
         let test_files = VERIFY_KZG_PROOF_TESTS;
 
-        for (test_file, data) in test_files {
+        for (_test_file, data) in test_files {
             let test: Test<Input> = serde_yaml::from_str(data).unwrap();
             let (Ok(commitment), Ok(z), Ok(y), Ok(proof)) = (
                 test.input.get_commitment(),
@@ -543,7 +543,7 @@ pub mod tests {
                 Ok(result) => {
                     assert_eq!(result, test.get_output().unwrap_or(false));
                 }
-                Err(e) => {
+                Err(_) => {
                     assert!(test.get_output().is_none());
                 }
             }
@@ -594,7 +594,7 @@ pub mod tests {
                 Ok(result) => {
                     assert_eq!(result, test.get_output().unwrap_or(false));
                 }
-                Err(e) => {
+                Err(_) => {
                     assert!(test.get_output().is_none());
                 }
             }
@@ -653,7 +653,7 @@ pub mod tests {
                 Ok(result) => {
                     assert_eq!(result, test.get_output().unwrap_or(false));
                 }
-                Err(e) => {
+                Err(_) => {
                     assert!(test.get_output().is_none());
                 }
             }

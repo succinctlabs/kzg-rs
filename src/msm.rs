@@ -15,7 +15,7 @@ fn log2(x: usize) -> u32 {
 
 /// Divide `self` by n.
 #[inline]
-pub fn divn(x: &Scalar, mut n: u32) -> Scalar {
+pub fn divn(x: &Scalar, n: u32) -> Scalar {
     if n >= 256 {
         return Scalar::from(0);
     }
