@@ -451,7 +451,7 @@ impl KzgProof {
 }
 
 #[cfg(all(feature = "std", feature = "cache"))]
-// #[cfg(test)]
+#[cfg(test)]
 pub mod tests {
 
     use super::*;
@@ -498,7 +498,7 @@ pub mod tests {
         }
     }
 
-    // #[test]
+    #[test]
     #[cfg(feature = "cache")]
     pub fn test_verify_kzg_proof() {
         let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
@@ -551,7 +551,7 @@ pub mod tests {
         }
     }
 
-    // #[test]
+    #[test]
     #[cfg(feature = "cache")]
     pub fn test_verify_blob_kzg_proof() {
         let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
@@ -604,7 +604,7 @@ pub mod tests {
         }
     }
 
-    // #[test]
+    #[test]
     #[cfg(feature = "cache")]
     pub fn test_verify_blob_kzg_proof_batch() {
         let test_files = VERIFY_BLOB_KZG_PROOF_BATCH_TESTS;
@@ -639,8 +639,8 @@ pub mod tests {
             }
         }
     }
-    //
-    // #[test]
+
+    #[test]
     pub fn test_compute_challenge() {
         let data = include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_fb324bc819407148/data.yaml");
 
@@ -656,7 +656,7 @@ pub mod tests {
         )
     }
 
-    // #[test]
+    #[test]
     #[cfg(feature = "cache")]
     pub fn test_evaluate_polynomial_in_evaluation_form() {
         let data = include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_19b3f3f8c98ea31e/data.yaml");
