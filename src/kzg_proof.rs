@@ -2,7 +2,6 @@ use core::num::NonZeroUsize;
 use core::ops::Mul;
 
 use crate::enums::KzgError;
-use crate::msm::msm_variable_base;
 use crate::trusted_setup::KzgSettings;
 use crate::{
     dtypes::*, pairings_verify, BYTES_PER_BLOB, BYTES_PER_COMMITMENT, BYTES_PER_FIELD_ELEMENT,
@@ -43,39 +42,32 @@ pub fn safe_scalar_affine_from_bytes(bytes: &Bytes32) -> Result<Scalar, KzgError
 }
 
 /// Return the Fiat-Shamir challenge required to verify `blob` and `commitment`.
+/// Return the Fiat-Shamir challenge required to verify `blob` and `commitment`.
 fn compute_challenge(blob: &Blob, commitment: &G1Affine) -> Result<Scalar, KzgError> {
     let mut bytes = [0_u8; CHALLENGE_INPUT_SIZE];
     let mut offset = 0_usize;
-
     // Copy domain separator
     bytes[offset..DOMAIN_STR_LENGTH].copy_from_slice(FIAT_SHAMIR_PROTOCOL_DOMAIN.as_bytes());
     offset += DOMAIN_STR_LENGTH;
-
     // Copy polynomial degree (16-bytes, big-endian)
     bytes[offset..offset + 8].copy_from_slice(&0_u64.to_be_bytes());
     offset += 8;
     bytes[offset..offset + 8].copy_from_slice(&(NUM_FIELD_ELEMENTS_PER_BLOB as u64).to_be_bytes());
     offset += 8;
-
     // Copy blob
     bytes[offset..offset + BYTES_PER_BLOB].copy_from_slice(blob.as_slice());
     offset += BYTES_PER_BLOB;
-
     // Copy commitment
     bytes[offset..offset + BYTES_PER_COMMITMENT].copy_from_slice(&commitment.to_compressed());
     offset += BYTES_PER_COMMITMENT;
-
     /* Make sure we wrote the entire buffer */
-
     if offset != CHALLENGE_INPUT_SIZE {
         return Err(KzgError::InvalidBytesLength(format!(
             "The challenge should be {} length, but was {}",
             CHALLENGE_INPUT_SIZE, offset,
         )));
     }
-
     let evaluation: [u8; 32] = Sha256::digest(bytes).into();
-
     Ok(scalar_from_bytes_unchecked(evaluation))
 }
 
@@ -113,12 +105,7 @@ pub fn evaluate_polynomial_in_evaluation_form(
     let mut inverses_in = vec![Scalar::default(); NUM_FIELD_ELEMENTS_PER_BLOB];
     let mut inverses = vec![Scalar::default(); NUM_FIELD_ELEMENTS_PER_BLOB];
     let roots_of_unity = kzg_settings.roots_of_unity;
-
     for i in 0..NUM_FIELD_ELEMENTS_PER_BLOB {
-        // If the point to evaluate at is one of the evaluation points by which
-        // the polynomial is given, we can just return the result directly.
-        // Note that special-casing this is necessary, as the formula below
-        // would divide by zero otherwise.
         if x == roots_of_unity[i] {
             return Ok(polynomial[i]);
         }
@@ -263,7 +250,10 @@ fn compute_r_powers(
     bytes[..16].copy_from_slice(RANDOM_CHALLENGE_KZG_BATCH_DOMAIN.as_bytes());
 
     bytes[16..24].copy_from_slice(&(NUM_FIELD_ELEMENTS_PER_BLOB as u64).to_be_bytes());
-    bytes[24..32].copy_from_slice(&n.to_be_bytes());
+
+    let mut n_bytes = n.to_be_bytes().to_vec();
+    n_bytes.resize(8, 0);
+    bytes[24..32].copy_from_slice(&n_bytes);
 
     let mut offset = 32;
 
@@ -363,37 +353,27 @@ impl KzgProof {
         let mut c_minus_y: Vec<G1Projective> = Vec::with_capacity(n);
         let mut r_times_z: Vec<Scalar> = Vec::with_capacity(n);
 
-        // Compute the random lincomb challenges
         let r_powers = compute_r_powers(commitments, zs, ys, proofs)?;
-
-        // Compute \sum r^i * Proof_i
         let proofs = proofs.iter().map(Into::into).collect::<Vec<_>>();
-        let proof_lincomb = msm_variable_base(&proofs, &r_powers);
+        let proof_lincomb = G1Projective::msm_variable_base(&proofs, &r_powers);
 
         for i in 0..n {
-            // Get [y_i]
             let ys_encrypted = G1Affine::generator() * ys[i];
-            // Get C_i - [y_i]
             c_minus_y.push(commitments[i] - ys_encrypted);
-            // Get r^i * z_i
             r_times_z.push(r_powers[i] * zs[i]);
         }
 
-        // Get \sum r^i z_i Proof_i
-        let proof_z_lincomb = msm_variable_base(&proofs, &r_times_z);
-        // Get \sum r^i (C_i - [y_i])
-        let c_minus_y_lincomb = msm_variable_base(&c_minus_y, &r_powers);
-
-        // Get C_minus_y_lincomb + proof_z_lincomb
+        let proof_z_lincomb = G1Projective::msm_variable_base(&proofs, &r_times_z);
+        let c_minus_y_lincomb = G1Projective::msm_variable_base(&c_minus_y, &r_powers);
         let rhs_g1 = c_minus_y_lincomb + proof_z_lincomb;
-
-        // Do the pairing check!
-        Ok(pairings_verify(
+        let result = pairings_verify(
             proof_lincomb.into(),
             kzg_settings.g2_points[1],
             rhs_g1.into(),
             G2Affine::generator(),
-        ))
+        );
+
+        Ok(result)
     }
 
     pub fn verify_blob_kzg_proof(
@@ -406,12 +386,12 @@ impl KzgProof {
         let polynomial = blob.as_polynomial()?;
         let proof = safe_g1_affine_from_bytes(proof_bytes)?;
 
-        // Compute challenge for the blob/commitment
         let evaluation_challenge = compute_challenge(&blob, &commitment)?;
         let y =
             evaluate_polynomial_in_evaluation_form(polynomial, evaluation_challenge, kzg_settings)?;
+        let out = verify_kzg_proof_impl(commitment, evaluation_challenge, y, proof, kzg_settings);
 
-        verify_kzg_proof_impl(commitment, evaluation_challenge, y, proof, kzg_settings)
+        out
     }
 
     pub fn verify_blob_kzg_proof_batch(
@@ -420,12 +400,10 @@ impl KzgProof {
         proofs_bytes: Vec<Bytes48>,
         kzg_settings: &KzgSettings,
     ) -> Result<bool, KzgError> {
-        // Exit early if we are given zero blobs
         if blobs.is_empty() {
             return Ok(true);
         }
 
-        // For a single blob, just do a regular single verification
         if blobs.len() == 1 {
             return Self::verify_blob_kzg_proof(
                 blobs[0].clone(),
@@ -473,7 +451,7 @@ impl KzgProof {
 }
 
 #[cfg(all(feature = "std", feature = "cache"))]
-#[cfg(test)]
+// #[cfg(test)]
 pub mod tests {
 
     use super::*;
@@ -520,9 +498,9 @@ pub mod tests {
         }
     }
 
-    #[test]
+    // #[test]
     #[cfg(feature = "cache")]
-    fn test_verify_kzg_proof() {
+    pub fn test_verify_kzg_proof() {
         let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
         let test_files = VERIFY_KZG_PROOF_TESTS;
 
@@ -538,7 +516,9 @@ pub mod tests {
                 continue;
             };
 
+            println!("cycle-tracker-start: test_verify_kzg_proof");
             let result = KzgProof::verify_kzg_proof(&commitment, &z, &y, &proof, &kzg_settings);
+            println!("cycle-tracker-end: test_verify_kzg_proof");
             match result {
                 Ok(result) => {
                     assert_eq!(result, test.get_output().unwrap_or(false));
@@ -571,14 +551,13 @@ pub mod tests {
         }
     }
 
-    #[test]
+    // #[test]
     #[cfg(feature = "cache")]
-    fn test_verify_blob_kzg_proof() {
+    pub fn test_verify_blob_kzg_proof() {
         let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
         let test_files = VERIFY_BLOB_KZG_PROOF_TESTS;
 
         for (test_file, data) in test_files {
-            println!("test_file: {:?}", test_file);
             let test: Test<BlobInput> = serde_yaml::from_str(&data).unwrap();
             let (Ok(blob), Ok(commitment), Ok(proof)) = (
                 test.input.get_blob(),
@@ -625,14 +604,13 @@ pub mod tests {
         }
     }
 
-    #[test]
+    // #[test]
     #[cfg(feature = "cache")]
-    fn test_verify_blob_kzg_proof_batch() {
+    pub fn test_verify_blob_kzg_proof_batch() {
         let test_files = VERIFY_BLOB_KZG_PROOF_BATCH_TESTS;
         let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
 
         for (test_file, data) in test_files {
-            println!("test_file: {:?}", test_file);
             let test: Test<BlobBatchInput> = serde_yaml::from_str(data).unwrap();
             let (Ok(blobs), Ok(commitments), Ok(proofs)) = (
                 test.input.get_blobs(),
@@ -643,12 +621,14 @@ pub mod tests {
                 continue;
             };
 
+            println!("cycle-tracker-start: test_verify_blob_kzg_proof_batch");
             let result = KzgProof::verify_blob_kzg_proof_batch(
                 vec![blobs],
                 vec![commitments],
                 vec![proofs],
                 &kzg_settings,
             );
+            println!("cycle-tracker-end: test_verify_blob_kzg_proof_batch");
             match result {
                 Ok(result) => {
                     assert_eq!(result, test.get_output().unwrap_or(false));
@@ -659,9 +639,9 @@ pub mod tests {
             }
         }
     }
-
-    #[test]
-    fn test_compute_challenge() {
+    //
+    // #[test]
+    pub fn test_compute_challenge() {
         let data = include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_fb324bc819407148/data.yaml");
 
         let test: Test<BlobInput> = serde_yaml::from_str(data).unwrap();
@@ -676,9 +656,9 @@ pub mod tests {
         )
     }
 
-    #[test]
+    // #[test]
     #[cfg(feature = "cache")]
-    fn test_evaluate_polynomial_in_evaluation_form() {
+    pub fn test_evaluate_polynomial_in_evaluation_form() {
         let data = include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_19b3f3f8c98ea31e/data.yaml");
 
         let test: Test<BlobInput> = serde_yaml::from_str(data).unwrap();

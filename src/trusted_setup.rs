@@ -62,9 +62,9 @@ pub const fn get_kzg_settings() -> KzgSettings {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[repr(C, align(4))]
 pub struct KzgSettings {
-    pub(crate) roots_of_unity: &'static [Scalar],
-    pub(crate) g1_points: &'static [G1Affine],
-    pub(crate) g2_points: &'static [G2Affine],
+    pub roots_of_unity: &'static [Scalar],
+    pub g1_points: &'static [G1Affine],
+    pub g2_points: &'static [G2Affine],
 }
 
 #[derive(Debug, Clone, Default, Eq)]
