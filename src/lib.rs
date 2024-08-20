@@ -10,14 +10,14 @@ pub mod consts;
 pub mod dtypes;
 pub mod enums;
 pub mod kzg_proof;
-pub mod trusted_setup;
 pub mod pairings;
+pub mod trusted_setup;
 
 pub use consts::*;
 pub use dtypes::*;
 pub use kzg_proof::KzgProof;
-pub use trusted_setup::*;
 pub use pairings::pairings_verify;
+pub use trusted_setup::*;
 
 pub use enums::KzgError;
 
@@ -515,140 +515,139 @@ mod test_files {
         ),
     ];
 
-    // pub const VERIFY_BLOB_KZG_PROOF_BATCH_TESTS: [(&str, &str); 27] = [
-    pub const VERIFY_BLOB_KZG_PROOF_BATCH_TESTS: [(&str, &str); 1] = [
-        // (
-        //     "verify_blob_kzg_proof_case_correct_proof_0951cfd9ab47a8d3",
-        //     include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_0951cfd9ab47a8d3/data.yaml"),
-        // ),
-        // (
-        //     "verify_blob_kzg_proof_case_correct_proof_19b3f3f8c98ea31e",
-        //     include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_19b3f3f8c98ea31e/data.yaml"),
-        // ),
-        // (
-        //     "verify_blob_kzg_proof_case_correct_proof_84d8089232bc23a8",
-        //     include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_84d8089232bc23a8/data.yaml"),
-        // ),
-        // (
-        //     "verify_blob_kzg_proof_case_correct_proof_a87a4e636e0f58fb",
-        //     include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_a87a4e636e0f58fb/data.yaml"),
-        // ),
-        // (
-        //     "verify_blob_kzg_proof_case_correct_proof_c40b9b515df8721b",
-        //     include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_c40b9b515df8721b/data.yaml"),
-        // ),
+    pub const VERIFY_BLOB_KZG_PROOF_BATCH_TESTS: [(&str, &str); 27] = [
+        (
+            "verify_blob_kzg_proof_case_correct_proof_0951cfd9ab47a8d3",
+            include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_0951cfd9ab47a8d3/data.yaml"),
+        ),
+        (
+            "verify_blob_kzg_proof_case_correct_proof_19b3f3f8c98ea31e",
+            include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_19b3f3f8c98ea31e/data.yaml"),
+        ),
+        (
+            "verify_blob_kzg_proof_case_correct_proof_84d8089232bc23a8",
+            include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_84d8089232bc23a8/data.yaml"),
+        ),
+        (
+            "verify_blob_kzg_proof_case_correct_proof_a87a4e636e0f58fb",
+            include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_a87a4e636e0f58fb/data.yaml"),
+        ),
+        (
+            "verify_blob_kzg_proof_case_correct_proof_c40b9b515df8721b",
+            include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_c40b9b515df8721b/data.yaml"),
+        ),
         (
             "verify_blob_kzg_proof_case_correct_proof_cdb3e6d49eb12307",
             include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_cdb3e6d49eb12307/data.yaml"),
         ),
-        // (
-        //     "verify_blob_kzg_proof_case_correct_proof_fb324bc819407148",
-        //     include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_fb324bc819407148/data.yaml"),
-        // ),
-    //     (
-    //         "verify_blob_kzg_proof_case_incorrect_proof_0951cfd9ab47a8d3",
-    //         include_str!(
-    //             "../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_incorrect_proof_0951cfd9ab47a8d3/data.yaml"
-    //         ),
-    //     ),
-    //     (
-    //         "verify_blob_kzg_proof_case_incorrect_proof_19b3f3f8c98ea31e",
-    //         include_str!(
-    //             "../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_incorrect_proof_19b3f3f8c98ea31e/data.yaml"
-    //         ),
-    //     ),
-    //     (
-    //         "verify_blob_kzg_proof_case_incorrect_proof_84d8089232bc23a8",
-    //         include_str!(
-    //             "../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_incorrect_proof_84d8089232bc23a8/data.yaml"
-    //         ),
-    //     ),
-    //     (
-    //         "verify_blob_kzg_proof_case_incorrect_proof_a87a4e636e0f58fb",
-    //         include_str!(
-    //             "../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_incorrect_proof_a87a4e636e0f58fb/data.yaml"
-    //         ),
-    //     ),
-    //     (
-    //         "verify_blob_kzg_proof_case_incorrect_proof_c40b9b515df8721b",
-    //         include_str!(
-    //             "../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_incorrect_proof_c40b9b515df8721b/data.yaml"
-    //         ),
-    //     ),
-    //     (
-    //         "verify_blob_kzg_proof_case_incorrect_proof_cdb3e6d49eb12307",
-    //         include_str!(
-    //             "../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_incorrect_proof_cdb3e6d49eb12307/data.yaml"
-    //         ),
-    //     ),
-    //     (
-    //         "verify_blob_kzg_proof_case_incorrect_proof_fb324bc819407148",
-    //         include_str!(
-    //             "../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_incorrect_proof_fb324bc819407148/data.yaml"
-    //         ),
-    //     ),
-    //     (
-    //         "verify_blob_kzg_proof_case_incorrect_proof_point_at_infinity",
-    //         include_str!(
-    //             "../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_incorrect_proof_point_at_infinity/data.yaml"
-    //         ),
-    //     ),
-    //     (
-    //         "verify_blob_kzg_proof_case_invalid_blob_59d64ff6b4648fad",
-    //         include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_invalid_blob_59d64ff6b4648fad/data.yaml"),
-    //     ),
-    //     (
-    //         "verify_blob_kzg_proof_case_invalid_blob_635fb2de5b0dc429",
-    //         include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_invalid_blob_635fb2de5b0dc429/data.yaml"),
-    //     ),
-    //     (
-    //         "verify_blob_kzg_proof_case_invalid_blob_a3b9ff28507767f8",
-    //         include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_invalid_blob_a3b9ff28507767f8/data.yaml"),
-    //     ),
-    //     (
-    //         "verify_blob_kzg_proof_case_invalid_blob_d3afbd98123a3434",
-    //         include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_invalid_blob_d3afbd98123a3434/data.yaml"),
-    //     ),
-    //     (
-    //         "verify_blob_kzg_proof_case_invalid_commitment_1a68c47b68148e78",
-    //         include_str!(
-    //             "../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_invalid_commitment_1a68c47b68148e78/data.yaml"
-    //         ),
-    //     ),
-    //     (
-    //         "verify_blob_kzg_proof_case_invalid_commitment_24b932fb4dec5b2d",
-    //         include_str!(
-    //             "../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_invalid_commitment_24b932fb4dec5b2d/data.yaml"
-    //         ),
-    //     ),
-    //     (
-    //         "verify_blob_kzg_proof_case_invalid_commitment_3a6eb616efae0627",
-    //         include_str!(
-    //             "../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_invalid_commitment_3a6eb616efae0627/data.yaml"
-    //         ),
-    //     ),
-    //     (
-    //         "verify_blob_kzg_proof_case_invalid_commitment_d070689c3e15444c",
-    //         include_str!(
-    //             "../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_invalid_commitment_d070689c3e15444c/data.yaml"
-    //         ),
-    //     ),
-    //     (
-    //         "verify_blob_kzg_proof_case_invalid_proof_1a68c47b68148e78",
-    //         include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_invalid_proof_1a68c47b68148e78/data.yaml"),
-    //     ),
-    //     (
-    //         "verify_blob_kzg_proof_case_invalid_proof_24b932fb4dec5b2d",
-    //         include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_invalid_proof_24b932fb4dec5b2d/data.yaml"),
-    //     ),
-    //     (
-    //         "verify_blob_kzg_proof_case_invalid_proof_3a6eb616efae0627",
-    //         include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_invalid_proof_3a6eb616efae0627/data.yaml"),
-    //     ),
-    //     (
-    //         "verify_blob_kzg_proof_case_invalid_proof_d070689c3e15444c",
-    //         include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_invalid_proof_d070689c3e15444c/data.yaml"),
-    //     ),
+        (
+            "verify_blob_kzg_proof_case_correct_proof_fb324bc819407148",
+            include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_fb324bc819407148/data.yaml"),
+        ),
+        (
+            "verify_blob_kzg_proof_case_incorrect_proof_0951cfd9ab47a8d3",
+            include_str!(
+                "../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_incorrect_proof_0951cfd9ab47a8d3/data.yaml"
+            ),
+        ),
+        (
+            "verify_blob_kzg_proof_case_incorrect_proof_19b3f3f8c98ea31e",
+            include_str!(
+                "../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_incorrect_proof_19b3f3f8c98ea31e/data.yaml"
+            ),
+        ),
+        (
+            "verify_blob_kzg_proof_case_incorrect_proof_84d8089232bc23a8",
+            include_str!(
+                "../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_incorrect_proof_84d8089232bc23a8/data.yaml"
+            ),
+        ),
+        (
+            "verify_blob_kzg_proof_case_incorrect_proof_a87a4e636e0f58fb",
+            include_str!(
+                "../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_incorrect_proof_a87a4e636e0f58fb/data.yaml"
+            ),
+        ),
+        (
+            "verify_blob_kzg_proof_case_incorrect_proof_c40b9b515df8721b",
+            include_str!(
+                "../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_incorrect_proof_c40b9b515df8721b/data.yaml"
+            ),
+        ),
+        (
+            "verify_blob_kzg_proof_case_incorrect_proof_cdb3e6d49eb12307",
+            include_str!(
+                "../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_incorrect_proof_cdb3e6d49eb12307/data.yaml"
+            ),
+        ),
+        (
+            "verify_blob_kzg_proof_case_incorrect_proof_fb324bc819407148",
+            include_str!(
+                "../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_incorrect_proof_fb324bc819407148/data.yaml"
+            ),
+        ),
+        (
+            "verify_blob_kzg_proof_case_incorrect_proof_point_at_infinity",
+            include_str!(
+                "../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_incorrect_proof_point_at_infinity/data.yaml"
+            ),
+        ),
+        (
+            "verify_blob_kzg_proof_case_invalid_blob_59d64ff6b4648fad",
+            include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_invalid_blob_59d64ff6b4648fad/data.yaml"),
+        ),
+        (
+            "verify_blob_kzg_proof_case_invalid_blob_635fb2de5b0dc429",
+            include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_invalid_blob_635fb2de5b0dc429/data.yaml"),
+        ),
+        (
+            "verify_blob_kzg_proof_case_invalid_blob_a3b9ff28507767f8",
+            include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_invalid_blob_a3b9ff28507767f8/data.yaml"),
+        ),
+        (
+            "verify_blob_kzg_proof_case_invalid_blob_d3afbd98123a3434",
+            include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_invalid_blob_d3afbd98123a3434/data.yaml"),
+        ),
+        (
+            "verify_blob_kzg_proof_case_invalid_commitment_1a68c47b68148e78",
+            include_str!(
+                "../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_invalid_commitment_1a68c47b68148e78/data.yaml"
+            ),
+        ),
+        (
+            "verify_blob_kzg_proof_case_invalid_commitment_24b932fb4dec5b2d",
+            include_str!(
+                "../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_invalid_commitment_24b932fb4dec5b2d/data.yaml"
+            ),
+        ),
+        (
+            "verify_blob_kzg_proof_case_invalid_commitment_3a6eb616efae0627",
+            include_str!(
+                "../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_invalid_commitment_3a6eb616efae0627/data.yaml"
+            ),
+        ),
+        (
+            "verify_blob_kzg_proof_case_invalid_commitment_d070689c3e15444c",
+            include_str!(
+                "../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_invalid_commitment_d070689c3e15444c/data.yaml"
+            ),
+        ),
+        (
+            "verify_blob_kzg_proof_case_invalid_proof_1a68c47b68148e78",
+            include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_invalid_proof_1a68c47b68148e78/data.yaml"),
+        ),
+        (
+            "verify_blob_kzg_proof_case_invalid_proof_24b932fb4dec5b2d",
+            include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_invalid_proof_24b932fb4dec5b2d/data.yaml"),
+        ),
+        (
+            "verify_blob_kzg_proof_case_invalid_proof_3a6eb616efae0627",
+            include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_invalid_proof_3a6eb616efae0627/data.yaml"),
+        ),
+        (
+            "verify_blob_kzg_proof_case_invalid_proof_d070689c3e15444c",
+            include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_invalid_proof_d070689c3e15444c/data.yaml"),
+        ),
     ];
 
     pub const VERIFY_BLOB_KZG_PROOF_TESTS: [(&str, &str); 29] = [

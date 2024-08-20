@@ -42,7 +42,6 @@ pub fn safe_scalar_affine_from_bytes(bytes: &Bytes32) -> Result<Scalar, KzgError
 }
 
 /// Return the Fiat-Shamir challenge required to verify `blob` and `commitment`.
-/// Return the Fiat-Shamir challenge required to verify `blob` and `commitment`.
 fn compute_challenge(blob: &Blob, commitment: &G1Affine) -> Result<Scalar, KzgError> {
     let mut bytes = [0_u8; CHALLENGE_INPUT_SIZE];
     let mut offset = 0_usize;
