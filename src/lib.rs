@@ -3,9 +3,6 @@
 #[macro_use]
 extern crate alloc;
 
-#[cfg(feature = "std")]
-extern crate std;
-
 pub mod consts;
 pub mod dtypes;
 pub mod enums;
