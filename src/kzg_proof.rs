@@ -131,6 +131,7 @@ pub fn evaluate_polynomial_in_evaluation_form(
     Ok(out)
 }
 
+/// Montgomery batch inversion in a finite field
 fn batch_inversion(out: &mut [Scalar], a: &[Scalar], len: NonZeroUsize) -> Result<(), KzgError> {
     if a == out {
         return Err(KzgError::BadArgs(
