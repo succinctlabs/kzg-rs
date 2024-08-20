@@ -28,10 +28,11 @@ pub fn safe_scalar_affine_from_bytes(bytes: &Bytes32) -> Result<Scalar, KzgError
     let lendian: [u8; 32] = Into::<[u8; 32]>::into(bytes.clone())
         .iter()
         .rev()
-        .map(|&x| x)
+        .copied()
         .collect::<Vec<u8>>()
         .try_into()
         .unwrap();
+
     let scalar = Scalar::from_bytes(&lendian);
     if scalar.is_none().into() {
         return Err(KzgError::BadArgs(
@@ -132,12 +133,37 @@ pub fn evaluate_polynomial_in_evaluation_form(
 }
 
 /// Montgomery batch inversion in a finite field
+/// Given a list of elements \( x_1, x_2, \dots, x_n \) from a finite field \( F \), Montgomery batch inversion computes the inverses \( x_1^{-1}, x_2^{-1}, \dots, x_n^{-1} \) as follows:
+///
+/// Let's consider three elements \( a \), \( b \), and \( c \) in a finite field \( F \). The steps are as follows:
+///
+/// 1. **Product Accumulation**:
+///     \[
+///     P = a \times b \times c
+///     \]
+///
+/// 2. **Single Inversion**:
+///     \[
+///     P^{-1} = \text{inverse}(P)
+///     \]
+///
+/// 3. **Backward Substitution**:
+///     - \( a^{-1} = P^{-1} \times (b \times c) \)
+///     - \( b^{-1} = P^{-1} \times (a \times c) \)
+///     - \( c^{-1} = P^{-1} \times (a \times b) \)
+///
 fn batch_inversion(out: &mut [Scalar], a: &[Scalar], len: NonZeroUsize) -> Result<(), KzgError> {
     if a == out {
         return Err(KzgError::BadArgs(
             "Destination is the same as source".to_string(),
         ));
     }
+
+// Compute the product of all the elements:
+//
+// \[
+// P = x_1 \times x_2 \times \dots \times x_n
+// \]
 
     let mut accumulator = Scalar::one();
 
@@ -150,8 +176,18 @@ fn batch_inversion(out: &mut [Scalar], a: &[Scalar], len: NonZeroUsize) -> Resul
         return Err(KzgError::BadArgs("Zero input".to_string()));
     }
 
+// Compute the inverse of the product \( P \):
+//
+// \[
+// P^{-1} = \text{inverse}(P)
+// \]
     accumulator = accumulator.invert().unwrap();
 
+// Compute the inverse of each element \( x_i^{-1} \) by using the precomputed product and its inverse:
+//
+// \[
+// x_i^{-1} = P^{-1} \times \left(\prod_{j \neq i} x_j \right)
+// \]
     for i in (0..len.into()).rev() {
         out[i] *= accumulator;
         accumulator *= a[i];
@@ -183,22 +219,26 @@ fn verify_kzg_proof_impl(
 }
 
 fn validate_batched_input(commitment: &[G1Affine], proofs: &[G1Affine]) -> Result<(), KzgError> {
+    // Check if any commitment is invalid (not on curve or identity)
     let invalid_commitment = commitment.iter().any(|commitment| {
         !bool::from(commitment.is_identity()) && !bool::from(commitment.is_on_curve())
     });
 
+    // Check if any proof is invalid (not on curve or identity)
     let invalid_proof = proofs
         .iter()
         .any(|proof| !bool::from(proof.is_identity()) && !bool::from(proof.is_on_curve()));
 
+    // Return error if any invalid commitment is found
     if invalid_commitment {
         return Err(KzgError::BadArgs("Invalid commitment".to_string()));
     }
+    // Return error if any invalid proof is found
     if invalid_proof {
         return Err(KzgError::BadArgs("Invalid proof".to_string()));
     }
 
-    Ok(())
+    Ok(()) // Return Ok if all commitments and proofs are valid
 }
 
 fn compute_challenges_and_evaluate_polynomial(
@@ -206,19 +246,25 @@ fn compute_challenges_and_evaluate_polynomial(
     commitment: &[G1Affine],
     kzg_settings: &KzgSettings,
 ) -> Result<(Vec<Scalar>, Vec<Scalar>), KzgError> {
+    // Initialize vectors to store evaluation challenges and polynomial evaluations
     let mut evaluation_challenges = Vec::with_capacity(blobs.len());
     let mut ys = Vec::with_capacity(blobs.len());
 
+    // Iterate over each blob to compute its polynomial evaluation
     for i in 0..blobs.len() {
+        // Convert the blob to its polynomial representation
         let polynomial = blobs[i].as_polynomial()?;
+        // Compute the Fiat-Shamir challenge for the current blob and its commitment
         let evaluation_challenge = compute_challenge(&blobs[i], &commitment[i])?;
-        let y =
-            evaluate_polynomial_in_evaluation_form(polynomial, evaluation_challenge, kzg_settings)?;
+        // Evaluate the polynomial at the computed challenge
+        let y = evaluate_polynomial_in_evaluation_form(polynomial, evaluation_challenge, kzg_settings)?;
 
+        // Store the evaluation challenge and the polynomial evaluation
         evaluation_challenges.push(evaluation_challenge);
         ys.push(y);
     }
 
+    // Return the vectors of evaluation challenges and polynomial evaluations
     Ok((evaluation_challenges, ys))
 }
 
@@ -350,22 +396,35 @@ impl KzgProof {
         kzg_settings: &KzgSettings,
     ) -> Result<bool, KzgError> {
         let n = commitments.len();
+
+        // Initialize vectors to store intermediate values
         let mut c_minus_y: Vec<G1Projective> = Vec::with_capacity(n);
         let mut r_times_z: Vec<Scalar> = Vec::with_capacity(n);
 
+        // Compute r powers
         let r_powers = compute_r_powers(commitments, zs, ys, proofs)?;
+
+        // Convert proofs to G1Projective
         let proofs = proofs.iter().map(Into::into).collect::<Vec<_>>();
+
+        // Compute proof linear combination
         let proof_lincomb = G1Projective::msm_variable_base(&proofs, &r_powers);
 
+        // Compute c_minus_y and r_times_z
         for i in 0..n {
             let ys_encrypted = G1Affine::generator() * ys[i];
             c_minus_y.push(commitments[i] - ys_encrypted);
             r_times_z.push(r_powers[i] * zs[i]);
         }
 
+        // Compute proof_z_lincomb and c_minus_y_lincomb
         let proof_z_lincomb = G1Projective::msm_variable_base(&proofs, &r_times_z);
         let c_minus_y_lincomb = G1Projective::msm_variable_base(&c_minus_y, &r_powers);
+
+        // Compute rhs_g1
         let rhs_g1 = c_minus_y_lincomb + proof_z_lincomb;
+
+        // Verify the pairing equation
         let result = pairings_verify(
             proof_lincomb.into(),
             kzg_settings.g2_points[1],
@@ -382,13 +441,22 @@ impl KzgProof {
         proof_bytes: &Bytes48,
         kzg_settings: &KzgSettings,
     ) -> Result<bool, KzgError> {
+        // Convert commitment bytes to G1Affine
         let commitment = safe_g1_affine_from_bytes(commitment_bytes)?;
+
+        // Convert blob to polynomial
         let polynomial = blob.as_polynomial()?;
+
+        // Convert proof bytes to G1Affine
         let proof = safe_g1_affine_from_bytes(proof_bytes)?;
 
+        // Compute the evaluation challenge for the blob and commitment
         let evaluation_challenge = compute_challenge(&blob, &commitment)?;
-        let y =
-            evaluate_polynomial_in_evaluation_form(polynomial, evaluation_challenge, kzg_settings)?;
+
+        // Evaluate the polynomial in evaluation form
+        let y = evaluate_polynomial_in_evaluation_form(polynomial, evaluation_challenge, kzg_settings)?;
+
+        // Verify the KZG proof
         verify_kzg_proof_impl(commitment, evaluation_challenge, y, proof, kzg_settings)
     }
 
@@ -550,7 +618,7 @@ pub mod tests {
         let test_files = VERIFY_BLOB_KZG_PROOF_TESTS;
 
         for (_test_file, data) in test_files {
-            let test: Test<BlobInput> = serde_yaml::from_str(&data).unwrap();
+            let test: Test<BlobInput> = serde_yaml::from_str(data).unwrap();
             let (Ok(blob), Ok(commitment), Ok(proof)) = (
                 test.input.get_blob(),
                 test.input.get_commitment(),

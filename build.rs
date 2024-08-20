@@ -21,7 +21,7 @@ fn hex_to_bytes(hex_str: &str) -> Result<Vec<u8>, KzgError> {
 
 pub fn load_trusted_setup_file_brute() -> Result<KzgSettingsOwned, KzgError> {
     let trusted_setup_file: Vec<String> = TRUSTED_SETUP_FILE
-        .split("\n")
+        .split('\n')
         .map(|x| x.to_string())
         .collect();
 
@@ -95,9 +95,9 @@ where
     let mut bit_reversed_permutation = [T::default(); N];
     let unused_bit_len = array.len().leading_zeros();
 
-    for i in 0..n {
+    for (i, item) in array.iter().enumerate().take(n) {
         let r = i.reverse_bits() >> (unused_bit_len + 1);
-        bit_reversed_permutation[r] = array[i];
+        bit_reversed_permutation[r] = *item;
     }
 
     Ok(bit_reversed_permutation)

@@ -37,9 +37,9 @@ macro_rules! define_bytes_type {
             }
         }
 
-        impl Into<[u8; $size]> for $name {
-            fn into(self) -> [u8; $size] {
-                self.0
+        impl From<$name> for [u8; $size] {
+            fn from(value: $name) -> [u8; $size] {
+                value.0
             }
         }
     };
