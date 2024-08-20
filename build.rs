@@ -1,4 +1,4 @@
-use std::{fs, io::Write};
+use std::{fs, io::Write, path::Path};
 const TRUSTED_SETUP_FILE: &str = include_str!("src/trusted_setup.txt");
 
 include!("src/enums.rs");
@@ -168,7 +168,15 @@ fn expand_root_of_unity(root: Scalar, width: usize) -> Result<Vec<Scalar>, KzgEr
 }
 
 fn main() {
-    println!("cargo:rerun-if-changed=src/trusted_setup.rs"); // Re-run this build script if the `g1.bin`,`g2.bin`, or `roots_of_unity.bin` files are changed
+
+    let g1_exists = Path::new("./src/g1.bin").exists();
+    let g2_exists = Path::new("./src/g2.bin").exists();
+    let roots_of_unity_exists = Path::new("./src/roots_of_unity.bin").exists();
+
+    if g1_exists && g2_exists && roots_of_unity_exists {
+        println!("cargo:rerun-if-changed=src/trusted_setup.rs"); // Re-run this build script if the `g1.bin`,`g2.bin`, or `roots_of_unity.bin` files are changed
+    }
+
 
     let KzgSettingsOwned {
         roots_of_unity,
