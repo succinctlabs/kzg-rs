@@ -1,9 +1,15 @@
 use crate::enums::KzgError;
 use crate::kzg_proof::safe_scalar_affine_from_bytes;
-use crate::{hex_to_bytes, BYTES_PER_BLOB, BYTES_PER_FIELD_ELEMENT};
+use crate::{BYTES_PER_BLOB, BYTES_PER_FIELD_ELEMENT};
 
 use alloc::{string::ToString, vec::Vec};
 use bls12_381::Scalar;
+
+pub fn hex_to_bytes(hex_str: &str) -> Result<Vec<u8>, KzgError> {
+    let trimmed_str = hex_str.strip_prefix("0x").unwrap_or(hex_str);
+    hex::decode(trimmed_str)
+        .map_err(|e| KzgError::InvalidHexFormat(format!("Failed to decode hex: {}", e)))
+}
 
 macro_rules! define_bytes_type {
     ($name:ident, $size:expr) => {

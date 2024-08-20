@@ -450,12 +450,10 @@ impl KzgProof {
     }
 }
 
-#[cfg(all(feature = "std", feature = "cache"))]
 #[cfg(test)]
 pub mod tests {
-
     use super::*;
-    use crate::{
+    use crate::test_files::{
         VERIFY_BLOB_KZG_PROOF_BATCH_TESTS, VERIFY_BLOB_KZG_PROOF_TESTS, VERIFY_KZG_PROOF_TESTS,
     };
     use serde_derive::Deserialize;
@@ -499,7 +497,6 @@ pub mod tests {
     }
 
     #[test]
-    #[cfg(feature = "cache")]
     pub fn test_verify_kzg_proof() {
         let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
         let test_files = VERIFY_KZG_PROOF_TESTS;
@@ -552,12 +549,11 @@ pub mod tests {
     }
 
     #[test]
-    #[cfg(feature = "cache")]
     pub fn test_verify_blob_kzg_proof() {
         let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
         let test_files = VERIFY_BLOB_KZG_PROOF_TESTS;
 
-        for (test_file, data) in test_files {
+        for (_test_file, data) in test_files {
             let test: Test<BlobInput> = serde_yaml::from_str(&data).unwrap();
             let (Ok(blob), Ok(commitment), Ok(proof)) = (
                 test.input.get_blob(),
@@ -605,12 +601,11 @@ pub mod tests {
     }
 
     #[test]
-    #[cfg(feature = "cache")]
     pub fn test_verify_blob_kzg_proof_batch() {
         let test_files = VERIFY_BLOB_KZG_PROOF_BATCH_TESTS;
         let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
 
-        for (test_file, data) in test_files {
+        for (_test_file, data) in test_files {
             let test: Test<BlobBatchInput> = serde_yaml::from_str(data).unwrap();
             let (Ok(blobs), Ok(commitments), Ok(proofs)) = (
                 test.input.get_blobs(),
@@ -657,7 +652,6 @@ pub mod tests {
     }
 
     #[test]
-    #[cfg(feature = "cache")]
     pub fn test_evaluate_polynomial_in_evaluation_form() {
         let data = include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_19b3f3f8c98ea31e/data.yaml");
 
