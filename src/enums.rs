@@ -17,9 +17,6 @@ pub enum KzgError {
     InvalidTrustedSetup(String),
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for KzgError {}
-
 impl fmt::Display for KzgError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
