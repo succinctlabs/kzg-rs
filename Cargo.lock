@@ -64,7 +64,7 @@ dependencies = [
 [[package]]
 name = "bls12_381"
 version = "0.8.0"
-source = "git+https://github.com/0xWOLAND/bls12_381/?branch=bhargav/experiment#e5f63c25859cf5657a64b31e9b583a02ae9a7bac"
+source = "git+https://github.com/0xWOLAND/bls12_381/?branch=bhargav/experiment#50fbac6e4d68967a6ccbb795e5dad9a56c96246d"
 dependencies = [
  "cfg-if",
  "ff",
