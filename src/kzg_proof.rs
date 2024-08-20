@@ -388,9 +388,7 @@ impl KzgProof {
         let evaluation_challenge = compute_challenge(&blob, &commitment)?;
         let y =
             evaluate_polynomial_in_evaluation_form(polynomial, evaluation_challenge, kzg_settings)?;
-        let out = verify_kzg_proof_impl(commitment, evaluation_challenge, y, proof, kzg_settings);
-
-        out
+        verify_kzg_proof_impl(commitment, evaluation_challenge, y, proof, kzg_settings)
     }
 
     pub fn verify_blob_kzg_proof_batch(
@@ -512,9 +510,7 @@ pub mod tests {
                 continue;
             };
 
-            println!("cycle-tracker-start: test_verify_kzg_proof");
             let result = KzgProof::verify_kzg_proof(&commitment, &z, &y, &proof, &kzg_settings);
-            println!("cycle-tracker-end: test_verify_kzg_proof");
             match result {
                 Ok(result) => {
                     assert_eq!(result, test.get_output().unwrap_or(false));
@@ -615,14 +611,12 @@ pub mod tests {
                 continue;
             };
 
-            println!("cycle-tracker-start: test_verify_blob_kzg_proof_batch");
             let result = KzgProof::verify_blob_kzg_proof_batch(
                 vec![blobs],
                 vec![commitments],
                 vec![proofs],
                 &kzg_settings,
             );
-            println!("cycle-tracker-end: test_verify_blob_kzg_proof_batch");
             match result {
                 Ok(result) => {
                     assert_eq!(result, test.get_output().unwrap_or(false));

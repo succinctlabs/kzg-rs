@@ -4,24 +4,25 @@ An endpoint for `verify_kzg_proof` in [c-kzg-4844](https://github.com/ethereum/c
 
 ## Cycle Counts in SP1
 
-| Operation            | Cycle Count |
-| -------------------- | ----------- |
-| `verify_kzg_proof`   | |
-| `load_trusted_setup` | 391         |
+| Operation                     | Cycle Count       |
+| ----------------------------- | ----------------- |
+| `verify_blob_kzg_proof`       | 27,166,240 cycles |
+| `verify_blob_kzg_proof_batch` | 27,363,307 cycles |
+| `verify_kzg_proof`            | 9,390,640 cycles  |
 
-Checkout the SP1 profile at [0xWOLAND/sp1-revm-kzg-profile](https://github.com/0xWOLAND/sp1-revm-kzg-profile). This crate has been used in a [fork of SP1's patch of `revm`](https://github.com/0xWOLAND/revm/tree/patch-v5.0.0), which passes all tests. Additionally, `kzg-rs` is based on [this](https://github.com/0xWOLAND/bls12_381) slightly modified fork of `bls12_381`. This crate works in `[no_std]` mode.
+This crate has been used in a [fork of SP1's patch of `revm`](https://github.com/0xWOLAND/revm/tree/patch-v5.0.0), which passes all tests.  `kzg-rs` is based on [this](https://github.com/0xWOLAND/bls12_381) slightly modified fork of `bls12_381`. This crate works in `[no_std]` mode.
 
 ## Usage
-```
+```sh
 cargo add kzg-rs
 ```
-And add
+Or add
 ```toml
-kzg-rs = { version = "0.1", default-features = false, features=['cache'] optional = true }
+kzg-rs = { version = "0.1" }
 ```
 
-You can rebuild `g1.bin` and `g2.bin` by running 
+You can rebuild `roots_of_unity.bin`, `g1.bin`, and `g2.bin` by running 
 
 ```sh 
-cargo run --bin build_binaries
+cargo build
 ```
