@@ -18,7 +18,6 @@ fn hex_to_bytes(hex_str: &str) -> Result<Vec<u8>, KzgError> {
         .map_err(|e| KzgError::InvalidHexFormat(format!("Failed to decode hex: {}", e)))
 }
 
-
 pub fn load_trusted_setup_file_brute() -> Result<KzgSettingsOwned, KzgError> {
     let trusted_setup_file: Vec<String> = TRUSTED_SETUP_FILE
         .split('\n')
@@ -169,6 +168,8 @@ fn expand_root_of_unity(root: Scalar, width: usize) -> Result<Vec<Scalar>, KzgEr
 }
 
 fn main() {
+    println!("cargo:rerun-if-changed=src/trusted_setup.rs"); // Re-run this build script if the `g1.bin`,`g2.bin`, or `roots_of_unity.bin` files are changed
+
     let KzgSettingsOwned {
         roots_of_unity,
         g1_points,
