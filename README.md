@@ -11,7 +11,7 @@ An endpoint for `verify_kzg_proof` in [c-kzg-4844](https://github.com/ethereum/c
 | Compute challenge                      | 57,341,532  |
 | Verify KZG proof                       | 9,390,640   |
 
-This crate has been used in a [fork of SP1's patch of `revm`](https://github.com/0xWOLAND/revm/tree/patch-v5.0.0), which passes all tests.  `kzg-rs` is based on [this](https://github.com/0xWOLAND/bls12_381) slightly modified fork of `bls12_381`. This crate works in `[no_std]` mode.
+This crate has been used in a [fork of SP1's patch of `revm`](https://github.com/0xWOLAND/revm/tree/patch-v5.0.0), which passes all tests.  `kzg-rs` is based on [this](https://github.com/sp1-patches/bls12_381/tree/patch-v0.8.0) slightly modified fork of `bls12_381`. This crate works in `[no_std]` mode.
 
 ## Usage
 ```sh
