@@ -5,33 +5,32 @@ edition = "2021"
 license = "MIT"
 name = "kzg-rs"
 version = "0.1.0"
-repository = "https://github.com/0xWOLAND/kzg-rs"
+repository = "https://github.com/succinctlabs/kzg-rs"
 
 [dependencies]
-serde_derive = { version = "1.0", optional = true }
-serde = { version = "1.0", optional = true, default-features = false, features = [
-    "alloc",
-    "derive",
-] }
 hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
-serde_yaml = { version = "0.9", optional = true }
 once_cell = { version = "1.19.0", default-features = false, features = [
     "race",
     "alloc",
 ] }
-bls12_381 = { version = "0.8.0", no-default-features = true }
+bls12_381 = { git = "https://github.com/sp1-patches/bls12_381/", default-features = false, branch = "patch-v0.8.0", features = [
+    "groups",
+    "pairings",
+    "alloc",
+] }
+sha2 = { version = "0.10.8", default-features = false }
+ff = { version = "0.13.0", default-features = false, features = ["derive"] }
 
 [dev-dependencies]
-glob = "0.3.1"
+hex = "0.4.3"
+serde_yaml = "0.9"
+serde_derive = "1.0"
+serde = { version = "^1.0", features = ["derive"] }
 
-[features]
-default = ["serde"]
-serde = ["dep:serde", "dep:serde_yaml", "dep:serde_derive"]
-kzg-test = ['std', 'cache']
-std = ["serde/std"]
-cache = []
-
-[[bin]]
-name = "build_binaries"
-path = "scripts/build_binaries.rs"
-required-features = ["std"]
+[build-dependencies]
+bls12_381 = { git = "https://github.com/sp1-patches/bls12_381/", default-features = false, branch = "patch-v0.8.0", features = [
+    "groups",
+    "pairings",
+    "alloc",
+] }
+hex = "0.4.3"

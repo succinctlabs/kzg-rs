@@ -1,7 +1,9 @@
 use crate::enums::KzgError;
-use crate::hex_to_bytes;
+use crate::kzg_proof::safe_scalar_affine_from_bytes;
+use crate::{BYTES_PER_BLOB, BYTES_PER_FIELD_ELEMENT};
 
-use alloc::string::ToString;
+use alloc::{string::ToString, vec::Vec};
+use bls12_381::Scalar;
 
 macro_rules! define_bytes_type {
     ($name:ident, $size:expr) => {
@@ -20,14 +22,14 @@ macro_rules! define_bytes_type {
                 Ok($name(bytes))
             }
 
-            pub fn from_hex(hex_str: &str) -> Result<Self, KzgError> {
-                Self::from_slice(&hex_to_bytes(hex_str).unwrap())
+            pub fn as_slice(&self) -> &[u8] {
+                &self.0
             }
         }
 
-        impl Into<[u8; $size]> for $name {
-            fn into(self) -> [u8; $size] {
-                self.0
+        impl From<$name> for [u8; $size] {
+            fn from(value: $name) -> [u8; $size] {
+                value.0
             }
         }
     };
@@ -35,6 +37,18 @@ macro_rules! define_bytes_type {
 
 define_bytes_type!(Bytes32, 32);
 define_bytes_type!(Bytes48, 48);
+define_bytes_type!(Blob, BYTES_PER_BLOB);
+
+impl Blob {
+    pub fn as_polynomial(&self) -> Result<Vec<Scalar>, KzgError> {
+        self.0
+            .chunks(BYTES_PER_FIELD_ELEMENT)
+            .map(|slice| {
+                Bytes32::from_slice(slice).and_then(|bytes| safe_scalar_affine_from_bytes(&bytes))
+            })
+            .collect()
+    }
+}
 
 #[cfg(test)]
 mod tests {

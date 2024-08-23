@@ -14,10 +14,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
+    - name: Clippy
+      run: cargo clippy --all-targets -- -D warnings
     - name: Build
-      run: cargo build --verbose --no-default-features --features=cache
+      run: cargo build --verbose --no-default-features 
     - name: Run tests
-      run: cargo test --verbose --features=kzg-test
+      run: cargo test --verbose 
   test-no-std:
     name: test no_std
     runs-on: ubuntu-latest
@@ -27,4 +30,4 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: riscv32imac-unknown-none-elf
-      - run: cargo check --target riscv32imac-unknown-none-elf --no-default-features --features=cache
+      - run: cargo check --target riscv32imac-unknown-none-elf --no-default-features 
