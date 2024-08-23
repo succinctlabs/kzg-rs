@@ -13,7 +13,6 @@ serde = { version = "1.0", optional = true, default-features = false, features =
     "alloc",
     "derive",
 ] }
-glob = "0.3.1"
 hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
 serde_yaml = { version = "0.9", optional = true }
 once_cell = { version = "1.19.0", default-features = false, features = [
@@ -21,6 +20,9 @@ once_cell = { version = "1.19.0", default-features = false, features = [
     "alloc",
 ] }
 bls12_381 = "0.8.0"
+
+[dev-dependencies]
+glob = "0.3.1"
 
 [features]
 default = ["std", "serde"]
