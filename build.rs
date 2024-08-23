@@ -4,7 +4,7 @@ include!("src/enums.rs");
 include!("src/consts.rs");
 include!("src/pairings.rs");
 
-#[cfg(not(target_os = "riscv32imac-unknown-none-elf"))]
+#[cfg(not(target_arch = "riscv32"))]
 fn main() {
     use std::{fs, io::Write, path::Path};
     #[derive(Debug, Clone, PartialEq, Eq)]
@@ -230,7 +230,7 @@ fn main() {
     g2_file.write_all(&g2_bytes).unwrap();
 }
 
-#[cfg(target_os = "riscv32imac-unknown-none-elf")]
+#[cfg(target_arch = "riscv32")]
 fn main() {
     // Binaries cannot be built in a RISC-V environment
 }

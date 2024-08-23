@@ -14,12 +14,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
     - name: Clippy
       run: cargo clippy --all-targets -- -D warnings
     - name: Build
       run: cargo build --verbose --no-default-features 
     - name: Run tests
-      run: cargo test --verbose --features=kzg-test
+      run: cargo test --verbose 
   test-no-std:
     name: test no_std
     runs-on: ubuntu-latest
