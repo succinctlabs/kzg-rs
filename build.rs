@@ -5,7 +5,6 @@ include!("src/consts.rs");
 include!("src/pairings.rs");
 
 #[cfg(not(target_os = "riscv32imac-unknown-none-elf"))]
-#[allow(unexpected_cfgs)]
 fn main() {
     use std::{fs, io::Write, path::Path};
     #[derive(Debug, Clone, PartialEq, Eq)]
@@ -232,7 +231,6 @@ fn main() {
 }
 
 #[cfg(target_os = "riscv32imac-unknown-none-elf")]
-#[allow(unexpected_cfgs)]
 fn main() {
     // Binaries cannot be built in a RISC-V environment
 }
