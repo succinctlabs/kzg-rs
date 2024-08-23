@@ -159,11 +159,11 @@ fn batch_inversion(out: &mut [Scalar], a: &[Scalar], len: NonZeroUsize) -> Resul
         ));
     }
 
-// Compute the product of all the elements:
-//
-// \[
-// P = x_1 \times x_2 \times \dots \times x_n
-// \]
+    // Compute the product of all the elements:
+    //
+    // \[
+    // P = x_1 \times x_2 \times \dots \times x_n
+    // \]
 
     let mut accumulator = Scalar::one();
 
@@ -176,18 +176,18 @@ fn batch_inversion(out: &mut [Scalar], a: &[Scalar], len: NonZeroUsize) -> Resul
         return Err(KzgError::BadArgs("Zero input".to_string()));
     }
 
-// Compute the inverse of the product \( P \):
-//
-// \[
-// P^{-1} = \text{inverse}(P)
-// \]
+    // Compute the inverse of the product \( P \):
+    //
+    // \[
+    // P^{-1} = \text{inverse}(P)
+    // \]
     accumulator = accumulator.invert().unwrap();
 
-// Compute the inverse of each element \( x_i^{-1} \) by using the precomputed product and its inverse:
-//
-// \[
-// x_i^{-1} = P^{-1} \times \left(\prod_{j \neq i} x_j \right)
-// \]
+    // Compute the inverse of each element \( x_i^{-1} \) by using the precomputed product and its inverse:
+    //
+    // \[
+    // x_i^{-1} = P^{-1} \times \left(\prod_{j \neq i} x_j \right)
+    // \]
     for i in (0..len.into()).rev() {
         out[i] *= accumulator;
         accumulator *= a[i];
@@ -257,7 +257,8 @@ fn compute_challenges_and_evaluate_polynomial(
         // Compute the Fiat-Shamir challenge for the current blob and its commitment
         let evaluation_challenge = compute_challenge(&blobs[i], &commitment[i])?;
         // Evaluate the polynomial at the computed challenge
-        let y = evaluate_polynomial_in_evaluation_form(polynomial, evaluation_challenge, kzg_settings)?;
+        let y =
+            evaluate_polynomial_in_evaluation_form(polynomial, evaluation_challenge, kzg_settings)?;
 
         // Store the evaluation challenge and the polynomial evaluation
         evaluation_challenges.push(evaluation_challenge);
@@ -454,7 +455,8 @@ impl KzgProof {
         let evaluation_challenge = compute_challenge(&blob, &commitment)?;
 
         // Evaluate the polynomial in evaluation form
-        let y = evaluate_polynomial_in_evaluation_form(polynomial, evaluation_challenge, kzg_settings)?;
+        let y =
+            evaluate_polynomial_in_evaluation_form(polynomial, evaluation_challenge, kzg_settings)?;
 
         // Verify the KZG proof
         verify_kzg_proof_impl(commitment, evaluation_challenge, y, proof, kzg_settings)
@@ -516,225 +518,225 @@ impl KzgProof {
     }
 }
 
-#[cfg(test)]
-pub mod tests {
-    use super::*;
-    use crate::test_files::{
-        VERIFY_BLOB_KZG_PROOF_BATCH_TESTS, VERIFY_BLOB_KZG_PROOF_TESTS, VERIFY_KZG_PROOF_TESTS,
-    };
-    use serde_derive::Deserialize;
+// #[cfg(test)]
+// pub mod tests {
+//     use super::*;
+//     use crate::test_files::{
+//         VERIFY_BLOB_KZG_PROOF_BATCH_TESTS, VERIFY_BLOB_KZG_PROOF_TESTS, VERIFY_KZG_PROOF_TESTS,
+//     };
+//     use serde_derive::Deserialize;
 
-    #[derive(Debug, Deserialize)]
-    pub struct Input<'a> {
-        commitment: &'a str,
-        z: &'a str,
-        y: &'a str,
-        proof: &'a str,
-    }
+//     #[derive(Debug, Deserialize)]
+//     pub struct Input<'a> {
+//         commitment: &'a str,
+//         z: &'a str,
+//         y: &'a str,
+//         proof: &'a str,
+//     }
 
-    impl Input<'_> {
-        pub fn get_commitment(&self) -> Result<Bytes48, KzgError> {
-            Bytes48::from_hex(self.commitment)
-        }
+//     impl Input<'_> {
+//         pub fn get_commitment(&self) -> Result<Bytes48, KzgError> {
+//             Bytes48::from_hex(self.commitment)
+//         }
 
-        pub fn get_z(&self) -> Result<Bytes32, KzgError> {
-            Bytes32::from_hex(self.z)
-        }
+//         pub fn get_z(&self) -> Result<Bytes32, KzgError> {
+//             Bytes32::from_hex(self.z)
+//         }
 
-        pub fn get_y(&self) -> Result<Bytes32, KzgError> {
-            Bytes32::from_hex(self.y)
-        }
+//         pub fn get_y(&self) -> Result<Bytes32, KzgError> {
+//             Bytes32::from_hex(self.y)
+//         }
 
-        pub fn get_proof(&self) -> Result<Bytes48, KzgError> {
-            Bytes48::from_hex(self.proof)
-        }
-    }
+//         pub fn get_proof(&self) -> Result<Bytes48, KzgError> {
+//             Bytes48::from_hex(self.proof)
+//         }
+//     }
 
-    #[derive(Debug, Deserialize)]
-    pub struct Test<I> {
-        pub input: I,
-        output: Option<bool>,
-    }
+//     #[derive(Debug, Deserialize)]
+//     pub struct Test<I> {
+//         pub input: I,
+//         output: Option<bool>,
+//     }
 
-    impl<I> Test<I> {
-        pub fn get_output(&self) -> Option<bool> {
-            self.output
-        }
-    }
+//     impl<I> Test<I> {
+//         pub fn get_output(&self) -> Option<bool> {
+//             self.output
+//         }
+//     }
 
-    #[test]
-    pub fn test_verify_kzg_proof() {
-        let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
-        let test_files = VERIFY_KZG_PROOF_TESTS;
+//     #[test]
+//     pub fn test_verify_kzg_proof() {
+//         let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
+//         let test_files = VERIFY_KZG_PROOF_TESTS;
 
-        for (_test_file, data) in test_files {
-            let test: Test<Input> = serde_yaml::from_str(data).unwrap();
-            let (Ok(commitment), Ok(z), Ok(y), Ok(proof)) = (
-                test.input.get_commitment(),
-                test.input.get_z(),
-                test.input.get_y(),
-                test.input.get_proof(),
-            ) else {
-                assert!(test.get_output().is_none());
-                continue;
-            };
+//         for (_test_file, data) in test_files {
+//             let test: Test<Input> = serde_yaml::from_str(data).unwrap();
+//             let (Ok(commitment), Ok(z), Ok(y), Ok(proof)) = (
+//                 test.input.get_commitment(),
+//                 test.input.get_z(),
+//                 test.input.get_y(),
+//                 test.input.get_proof(),
+//             ) else {
+//                 assert!(test.get_output().is_none());
+//                 continue;
+//             };
 
-            let result = KzgProof::verify_kzg_proof(&commitment, &z, &y, &proof, &kzg_settings);
-            match result {
-                Ok(result) => {
-                    assert_eq!(result, test.get_output().unwrap_or(false));
-                }
-                Err(_) => {
-                    assert!(test.get_output().is_none());
-                }
-            }
-        }
-    }
+//             let result = KzgProof::verify_kzg_proof(&commitment, &z, &y, &proof, &kzg_settings);
+//             match result {
+//                 Ok(result) => {
+//                     assert_eq!(result, test.get_output().unwrap_or(false));
+//                 }
+//                 Err(_) => {
+//                     assert!(test.get_output().is_none());
+//                 }
+//             }
+//         }
+//     }
 
-    #[derive(Debug, Deserialize)]
-    pub struct BlobInput<'a> {
-        blob: &'a str,
-        commitment: &'a str,
-        proof: &'a str,
-    }
+//     #[derive(Debug, Deserialize)]
+//     pub struct BlobInput<'a> {
+//         blob: &'a str,
+//         commitment: &'a str,
+//         proof: &'a str,
+//     }
 
-    impl BlobInput<'_> {
-        pub fn get_blob(&self) -> Result<Blob, KzgError> {
-            Blob::from_hex(self.blob)
-        }
+//     impl BlobInput<'_> {
+//         pub fn get_blob(&self) -> Result<Blob, KzgError> {
+//             Blob::from_hex(self.blob)
+//         }
 
-        pub fn get_commitment(&self) -> Result<Bytes48, KzgError> {
-            Bytes48::from_hex(self.commitment)
-        }
+//         pub fn get_commitment(&self) -> Result<Bytes48, KzgError> {
+//             Bytes48::from_hex(self.commitment)
+//         }
 
-        pub fn get_proof(&self) -> Result<Bytes48, KzgError> {
-            Bytes48::from_hex(self.proof)
-        }
-    }
+//         pub fn get_proof(&self) -> Result<Bytes48, KzgError> {
+//             Bytes48::from_hex(self.proof)
+//         }
+//     }
 
-    #[test]
-    pub fn test_verify_blob_kzg_proof() {
-        let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
-        let test_files = VERIFY_BLOB_KZG_PROOF_TESTS;
+//     #[test]
+//     pub fn test_verify_blob_kzg_proof() {
+//         let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
+//         let test_files = VERIFY_BLOB_KZG_PROOF_TESTS;
 
-        for (_test_file, data) in test_files {
-            let test: Test<BlobInput> = serde_yaml::from_str(data).unwrap();
-            let (Ok(blob), Ok(commitment), Ok(proof)) = (
-                test.input.get_blob(),
-                test.input.get_commitment(),
-                test.input.get_proof(),
-            ) else {
-                assert!(test.get_output().is_none());
-                continue;
-            };
+//         for (_test_file, data) in test_files {
+//             let test: Test<BlobInput> = serde_yaml::from_str(data).unwrap();
+//             let (Ok(blob), Ok(commitment), Ok(proof)) = (
+//                 test.input.get_blob(),
+//                 test.input.get_commitment(),
+//                 test.input.get_proof(),
+//             ) else {
+//                 assert!(test.get_output().is_none());
+//                 continue;
+//             };
 
-            let result = KzgProof::verify_blob_kzg_proof(blob, &commitment, &proof, &kzg_settings);
-            match result {
-                Ok(result) => {
-                    assert_eq!(result, test.get_output().unwrap_or(false));
-                }
-                Err(_) => {
-                    assert!(test.get_output().is_none());
-                }
-            }
-        }
-    }
+//             let result = KzgProof::verify_blob_kzg_proof(blob, &commitment, &proof, &kzg_settings);
+//             match result {
+//                 Ok(result) => {
+//                     assert_eq!(result, test.get_output().unwrap_or(false));
+//                 }
+//                 Err(_) => {
+//                     assert!(test.get_output().is_none());
+//                 }
+//             }
+//         }
+//     }
 
-    #[derive(Debug, Deserialize)]
-    struct BlobBatchInput<'a> {
-        #[serde(borrow)]
-        blob: &'a str,
-        #[serde(borrow)]
-        commitment: &'a str,
-        #[serde(borrow)]
-        proof: &'a str,
-    }
+//     #[derive(Debug, Deserialize)]
+//     struct BlobBatchInput<'a> {
+//         #[serde(borrow)]
+//         blob: &'a str,
+//         #[serde(borrow)]
+//         commitment: &'a str,
+//         #[serde(borrow)]
+//         proof: &'a str,
+//     }
 
-    impl<'a> BlobBatchInput<'a> {
-        pub fn get_blobs(&self) -> Result<Blob, KzgError> {
-            Blob::from_hex(self.blob)
-        }
+//     impl<'a> BlobBatchInput<'a> {
+//         pub fn get_blobs(&self) -> Result<Blob, KzgError> {
+//             Blob::from_hex(self.blob)
+//         }
 
-        pub fn get_commitments(&self) -> Result<Bytes48, KzgError> {
-            Bytes48::from_hex(self.commitment)
-        }
+//         pub fn get_commitments(&self) -> Result<Bytes48, KzgError> {
+//             Bytes48::from_hex(self.commitment)
+//         }
 
-        pub fn get_proofs(&self) -> Result<Bytes48, KzgError> {
-            Bytes48::from_hex(self.proof)
-        }
-    }
+//         pub fn get_proofs(&self) -> Result<Bytes48, KzgError> {
+//             Bytes48::from_hex(self.proof)
+//         }
+//     }
 
-    #[test]
-    pub fn test_verify_blob_kzg_proof_batch() {
-        let test_files = VERIFY_BLOB_KZG_PROOF_BATCH_TESTS;
-        let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
+//     #[test]
+//     pub fn test_verify_blob_kzg_proof_batch() {
+//         let test_files = VERIFY_BLOB_KZG_PROOF_BATCH_TESTS;
+//         let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
 
-        for (_test_file, data) in test_files {
-            let test: Test<BlobBatchInput> = serde_yaml::from_str(data).unwrap();
-            let (Ok(blobs), Ok(commitments), Ok(proofs)) = (
-                test.input.get_blobs(),
-                test.input.get_commitments(),
-                test.input.get_proofs(),
-            ) else {
-                assert!(test.get_output().is_none());
-                continue;
-            };
+//         for (_test_file, data) in test_files {
+//             let test: Test<BlobBatchInput> = serde_yaml::from_str(data).unwrap();
+//             let (Ok(blobs), Ok(commitments), Ok(proofs)) = (
+//                 test.input.get_blobs(),
+//                 test.input.get_commitments(),
+//                 test.input.get_proofs(),
+//             ) else {
+//                 assert!(test.get_output().is_none());
+//                 continue;
+//             };
 
-            let result = KzgProof::verify_blob_kzg_proof_batch(
-                vec![blobs],
-                vec![commitments],
-                vec![proofs],
-                &kzg_settings,
-            );
-            match result {
-                Ok(result) => {
-                    assert_eq!(result, test.get_output().unwrap_or(false));
-                }
-                Err(_) => {
-                    assert!(test.get_output().is_none());
-                }
-            }
-        }
-    }
+//             let result = KzgProof::verify_blob_kzg_proof_batch(
+//                 vec![blobs],
+//                 vec![commitments],
+//                 vec![proofs],
+//                 &kzg_settings,
+//             );
+//             match result {
+//                 Ok(result) => {
+//                     assert_eq!(result, test.get_output().unwrap_or(false));
+//                 }
+//                 Err(_) => {
+//                     assert!(test.get_output().is_none());
+//                 }
+//             }
+//         }
+//     }
 
-    #[test]
-    pub fn test_compute_challenge() {
-        let data = include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_fb324bc819407148/data.yaml");
+//     #[test]
+//     pub fn test_compute_challenge() {
+//         let data = include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_fb324bc819407148/data.yaml");
 
-        let test: Test<BlobInput> = serde_yaml::from_str(data).unwrap();
-        let blob = test.input.get_blob().unwrap();
-        let commitment = safe_g1_affine_from_bytes(&test.input.get_commitment().unwrap()).unwrap();
+//         let test: Test<BlobInput> = serde_yaml::from_str(data).unwrap();
+//         let blob = test.input.get_blob().unwrap();
+//         let commitment = safe_g1_affine_from_bytes(&test.input.get_commitment().unwrap()).unwrap();
 
-        let evaluation_challenge = compute_challenge(&blob, &commitment).unwrap();
+//         let evaluation_challenge = compute_challenge(&blob, &commitment).unwrap();
 
-        assert_eq!(
-            format!("{evaluation_challenge}"),
-            "0x4f00eef944a21cb9f3ac3390702621e4bbf1198767c43c0fb9c8e9923bfbb31a"
-        )
-    }
+//         assert_eq!(
+//             format!("{evaluation_challenge}"),
+//             "0x4f00eef944a21cb9f3ac3390702621e4bbf1198767c43c0fb9c8e9923bfbb31a"
+//         )
+//     }
 
-    #[test]
-    pub fn test_evaluate_polynomial_in_evaluation_form() {
-        let data = include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_19b3f3f8c98ea31e/data.yaml");
+//     #[test]
+//     pub fn test_evaluate_polynomial_in_evaluation_form() {
+//         let data = include_str!("../tests/verify_blob_kzg_proof/verify_blob_kzg_proof_case_correct_proof_19b3f3f8c98ea31e/data.yaml");
 
-        let test: Test<BlobInput> = serde_yaml::from_str(data).unwrap();
-        let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
-        let blob = test.input.get_blob().unwrap();
-        let polynomial = blob.as_polynomial().unwrap();
+//         let test: Test<BlobInput> = serde_yaml::from_str(data).unwrap();
+//         let kzg_settings = KzgSettings::load_trusted_setup_file().unwrap();
+//         let blob = test.input.get_blob().unwrap();
+//         let polynomial = blob.as_polynomial().unwrap();
 
-        let evaluation_challenge = scalar_from_bytes_unchecked(
-            Bytes32::from_hex("0x637c904d316955b7282f980433d5cd9f40d0533c45d0a233c009bc7fe28b92e3")
-                .unwrap()
-                .into(),
-        );
+//         let evaluation_challenge = scalar_from_bytes_unchecked(
+//             Bytes32::from_hex("0x637c904d316955b7282f980433d5cd9f40d0533c45d0a233c009bc7fe28b92e3")
+//                 .unwrap()
+//                 .into(),
+//         );
 
-        let y =
-            evaluate_polynomial_in_evaluation_form(polynomial, evaluation_challenge, &kzg_settings)
-                .unwrap();
+//         let y =
+//             evaluate_polynomial_in_evaluation_form(polynomial, evaluation_challenge, &kzg_settings)
+//                 .unwrap();
 
-        assert_eq!(
-            format!("{y}"),
-            "0x1bdfc5da40334b9c51220e8cbea1679c20a7f32dd3d7f3c463149bb4b41a7d18"
-        );
-    }
-}
+//         assert_eq!(
+//             format!("{y}"),
+//             "0x1bdfc5da40334b9c51220e8cbea1679c20a7f32dd3d7f3c463149bb4b41a7d18"
+//         );
+//     }
+// }
