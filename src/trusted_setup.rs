@@ -1,13 +1,13 @@
+use crate::{enums::KzgError, NUM_G1_POINTS, NUM_ROOTS_OF_UNITY};
+
+use alloc::sync::Arc;
+use bls12_381::{G1Affine, G2Affine, Scalar};
 use core::{
     hash::{Hash, Hasher},
     mem::transmute,
     slice,
 };
-use alloc::{boxed::Box, sync::Arc};
-use bls12_381::{G1Affine, G2Affine, Scalar};
-use once_cell::race::OnceBox;
-
-use crate::{enums::KzgError, NUM_G1_POINTS, NUM_ROOTS_OF_UNITY};
+use spin::Once;
 
 pub const fn get_roots_of_unity() -> &'static [Scalar] {
     const ROOT_OF_UNITY_BYTES: &[u8] = include_bytes!("roots_of_unity.bin");
@@ -81,11 +81,10 @@ impl EnvKzgSettings {
     pub fn get(&self) -> &KzgSettings {
         match self {
             Self::Default => {
-                static DEFAULT: OnceBox<KzgSettings> = OnceBox::new();
-                DEFAULT.get_or_init(|| {
-                    let settings = KzgSettings::load_trusted_setup_file()
-                        .expect("failed to load default trusted setup");
-                    Box::new(settings)
+                static DEFAULT: Once<KzgSettings> = Once::new();
+                DEFAULT.call_once(|| {
+                    KzgSettings::load_trusted_setup_file()
+                        .expect("failed to load default trusted setup")
                 })
             }
             Self::Custom(settings) => settings,
