@@ -19,7 +19,7 @@ cargo add kzg-rs
 ```
 Or add
 ```toml
-kzg-rs = { version = "0.2.2" }
+kzg-rs = { version = "0.2.3" }
 ```
 
 You can rebuild `roots_of_unity.bin`, `g1.bin`, and `g2.bin` by running 
