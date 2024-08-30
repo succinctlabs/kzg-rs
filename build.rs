@@ -4,9 +4,9 @@ include!("src/enums.rs");
 include!("src/consts.rs");
 include!("src/pairings.rs");
 
-#[cfg(not(target_arch = "riscv32"))]
+#[cfg(not(any(target_arch = "riscv32", doc)))]
 fn main() {
-    use std::{fs, io::Write, path::Path};
+    use std::{env, fs, io::Write, path::Path};
     #[derive(Debug, Clone, PartialEq, Eq)]
     pub struct KzgSettingsOwned {
         pub roots_of_unity: [Scalar; NUM_ROOTS_OF_UNITY],
@@ -169,9 +169,14 @@ fn main() {
         Ok(expanded)
     }
 
-    let g1_exists = Path::new("./src/g1.bin").exists();
-    let g2_exists = Path::new("./src/g2.bin").exists();
-    let roots_of_unity_exists = Path::new("./src/roots_of_unity.bin").exists();
+    let out_dir = env::var("OUT_DIR").unwrap();
+    let g1_path = Path::new(&out_dir).join("g1.bin");
+    let g2_path = Path::new(&out_dir).join("g2.bin");
+    let roots_of_unity_path = Path::new(&out_dir).join("roots_of_unity.bin");
+
+    let g1_exists = g1_path.exists();
+    let g2_exists = g2_path.exists();
+    let roots_of_unity_exists = roots_of_unity_path.exists();
 
     if g1_exists && g2_exists && roots_of_unity_exists {
         println!("cargo:rerun-if-changed=src/trusted_setup.rs"); // Re-run this build script if the `g1.bin`,`g2.bin`, or `roots_of_unity.bin` files are changed
@@ -204,7 +209,7 @@ fn main() {
         .create(true)
         .truncate(true)
         .write(true)
-        .open("src/roots_of_unity.bin")
+        .open(&roots_of_unity_path)
         .unwrap();
 
     roots_of_unity_file
@@ -215,7 +220,7 @@ fn main() {
         .create(true)
         .truncate(true)
         .write(true)
-        .open("src/g1.bin")
+        .open(&g1_path)
         .unwrap();
 
     g1_file.write_all(&g1_bytes).unwrap();
@@ -224,13 +229,13 @@ fn main() {
         .create(true)
         .truncate(true)
         .write(true)
-        .open("src/g2.bin")
+        .open(&g2_path)
         .unwrap();
 
     g2_file.write_all(&g2_bytes).unwrap();
 }
 
-#[cfg(target_arch = "riscv32")]
+#[cfg(any(target_arch = "riscv32", doc))]
 fn main() {
-    // Binaries cannot be built in a RISC-V environment
+    // Binaries cannot be built in a RISC-V environment or when building docs
 }
