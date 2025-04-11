@@ -682,7 +682,7 @@ pub mod tests {
         proof: &'a str,
     }
 
-    impl<'a> BlobBatchInput<'a> {
+    impl BlobBatchInput<'_> {
         pub fn get_blobs(&self) -> Result<Blob, KzgError> {
             Blob::from_hex(self.blob)
         }
