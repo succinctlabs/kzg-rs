@@ -138,19 +138,19 @@ pub fn evaluate_polynomial_in_evaluation_form(
 /// Let's consider three elements \( a \), \( b \), and \( c \) in a finite field \( F \). The steps are as follows:
 ///
 /// 1. **Product Accumulation**:
-///     \[
-///     P = a \times b \times c
-///     \]
+///   ```text
+///   P = a × b × c
+///   ```
 ///
 /// 2. **Single Inversion**:
-///     \[
-///     P^{-1} = \text{inverse}(P)
-///     \]
+///   ```text
+///   P⁻¹ = inverse(P)
+///   ```
 ///
 /// 3. **Backward Substitution**:
-///     - \( a^{-1} = P^{-1} \times (b \times c) \)
-///     - \( b^{-1} = P^{-1} \times (a \times c) \)
-///     - \( c^{-1} = P^{-1} \times (a \times b) \)
+///   - a⁻¹ = P⁻¹ × (b × c)
+///   - b⁻¹ = P⁻¹ × (a × c)
+///   - c⁻¹ = P⁻¹ × (a × b)
 ///
 fn batch_inversion(out: &mut [Scalar], a: &[Scalar], len: NonZeroUsize) -> Result<(), KzgError> {
     if a == out {
