@@ -1,14 +1,14 @@
 use crate::enums::KzgError;
 use crate::kzg_proof::safe_scalar_affine_from_bytes;
 use crate::{BYTES_PER_BLOB, BYTES_PER_FIELD_ELEMENT};
-
 use alloc::{string::ToString, vec::Vec};
 use bls12_381::Scalar;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 macro_rules! define_bytes_type {
     ($name:ident, $size:expr) => {
         #[derive(Debug, Clone)]
-        pub struct $name([u8; $size]);
+        pub struct $name(pub [u8; $size]);
 
         impl $name {
             pub fn from_slice(slice: &[u8]) -> Result<Self, KzgError> {
@@ -30,6 +30,35 @@ macro_rules! define_bytes_type {
         impl From<$name> for [u8; $size] {
             fn from(value: $name) -> [u8; $size] {
                 value.0
+            }
+        }
+
+        // Custom Serialize implementation
+        impl Serialize for $name {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: Serializer,
+            {
+                serializer.serialize_bytes(&self.0)
+            }
+        }
+
+        // Custom Deserialize implementation
+        impl<'de> Deserialize<'de> for $name {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                let bytes: Vec<u8> = Vec::deserialize(deserializer)?;
+                if bytes.len() != $size {
+                    return Err(serde::de::Error::custom(format!(
+                        "Invalid length for {}",
+                        stringify!($name)
+                    )));
+                }
+                let mut result = [0u8; $size];
+                result.copy_from_slice(&bytes);
+                Ok($name(result))
             }
         }
     };
