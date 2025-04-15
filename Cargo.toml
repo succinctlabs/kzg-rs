@@ -4,7 +4,7 @@ description = "Rust implementation of KZG point evaluation"
 edition = "2021"
 license = "MIT"
 name = "kzg-rs"
-version = "0.2.5"
+version = "0.2.6"
 repository = "https://github.com/succinctlabs/kzg-rs"
 
 [dependencies]
