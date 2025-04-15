@@ -43,7 +43,7 @@ pub fn safe_scalar_affine_from_bytes(bytes: &Bytes32) -> Result<Scalar, KzgError
 }
 
 /// Return the Fiat-Shamir challenge required to verify `blob` and `commitment`.
-fn compute_challenge(blob: &Blob, commitment: &G1Affine) -> Result<Scalar, KzgError> {
+pub fn compute_challenge(blob: &Blob, commitment: &G1Affine) -> Result<Scalar, KzgError> {
     let mut bytes = [0_u8; CHALLENGE_INPUT_SIZE];
     let mut offset = 0_usize;
     // Copy domain separator
@@ -152,7 +152,11 @@ pub fn evaluate_polynomial_in_evaluation_form(
 ///   - b⁻¹ = P⁻¹ × (a × c)
 ///   - c⁻¹ = P⁻¹ × (a × b)
 ///
-fn batch_inversion(out: &mut [Scalar], a: &[Scalar], len: NonZeroUsize) -> Result<(), KzgError> {
+pub fn batch_inversion(
+    out: &mut [Scalar],
+    a: &[Scalar],
+    len: NonZeroUsize,
+) -> Result<(), KzgError> {
     if a == out {
         return Err(KzgError::BadArgs(
             "Destination is the same as source".to_string(),
@@ -196,7 +200,7 @@ fn batch_inversion(out: &mut [Scalar], a: &[Scalar], len: NonZeroUsize) -> Resul
     Ok(())
 }
 
-fn verify_kzg_proof_impl(
+pub fn verify_kzg_proof_impl(
     commitment: G1Affine,
     z: Scalar,
     y: Scalar,
@@ -218,7 +222,10 @@ fn verify_kzg_proof_impl(
     ))
 }
 
-fn validate_batched_input(commitment: &[G1Affine], proofs: &[G1Affine]) -> Result<(), KzgError> {
+pub fn validate_batched_input(
+    commitment: &[G1Affine],
+    proofs: &[G1Affine],
+) -> Result<(), KzgError> {
     // Check if any commitment is invalid (not on curve or identity)
     let invalid_commitment = commitment.iter().any(|commitment| {
         !bool::from(commitment.is_identity()) && !bool::from(commitment.is_on_curve())
@@ -241,7 +248,7 @@ fn validate_batched_input(commitment: &[G1Affine], proofs: &[G1Affine]) -> Resul
     Ok(()) // Return Ok if all commitments and proofs are valid
 }
 
-fn compute_challenges_and_evaluate_polynomial(
+pub fn compute_challenges_and_evaluate_polynomial(
     blobs: Vec<Blob>,
     commitment: &[G1Affine],
     kzg_settings: &KzgSettings,
@@ -281,7 +288,7 @@ pub fn compute_powers(base: &Scalar, num_powers: usize) -> Vec<Scalar> {
     powers
 }
 
-fn compute_r_powers(
+pub fn compute_r_powers(
     commitment: &[G1Affine],
     zs: &[Scalar],
     ys: &[Scalar],
