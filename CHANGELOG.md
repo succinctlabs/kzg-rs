@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.7](https://github.com/succinctlabs/kzg-rs/compare/v0.2.6...v0.2.7) - 2025-05-30
+
+### Other
+
+- bump sp1_bls12_381 to patch-0.8.0-sp1-5.0.0
+
 ## [0.2.6](https://github.com/succinctlabs/kzg-rs/compare/v0.2.5...v0.2.6) - 2025-04-15
 
 ### Added
