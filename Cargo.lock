@@ -63,20 +63,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bls12_381"
-version = "0.8.0"
-source = "git+https://github.com/sp1-patches/bls12_381?tag=patch-0.8.0-sp1-5.0.0#8774878d42311b956022007e9960043baad24a7f"
-dependencies = [
- "cfg-if",
- "ff",
- "group",
- "pairing",
- "rand_core",
- "sp1-lib",
- "subtle",
-]
-
-[[package]]
 name = "bytecheck"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -286,7 +272,6 @@ checksum = "49f1f14873335454500d59611f1cf4a4b0f786f9ac11f4312a78e4cf2566695b"
 name = "kzg-rs"
 version = "0.2.7"
 dependencies = [
- "bls12_381",
  "ff",
  "hex",
  "rkyv",
@@ -295,6 +280,7 @@ dependencies = [
  "serde_derive",
  "serde_yaml",
  "sha2",
+ "sp1_bls12_381",
  "spin",
 ]
 
@@ -727,6 +713,21 @@ dependencies = [
  "p3-symmetric",
  "serde",
  "sha2",
+]
+
+[[package]]
+name = "sp1_bls12_381"
+version = "0.8.0-sp1-5.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ac255e1704ebcdeec5e02f6a0ebc4d2e9e6b802161938330b6810c13a610c583"
+dependencies = [
+ "cfg-if",
+ "ff",
+ "group",
+ "pairing",
+ "rand_core",
+ "sp1-lib",
+ "subtle",
 ]
 
 [[package]]
