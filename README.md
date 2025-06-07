@@ -1,4 +1,4 @@
-# kzg-rs [![Rust](https://github.com/0xWOLAND/kzg-rs/actions/workflows/rust.yml/badge.svg?branch=master)](https://github.com/0xWOLAND/kzg-rs/actions/workflows/rust.yml)
+# kzg-rs [![Rust](https://github.com/succinctlabs/kzg-rs/actions/workflows/rust.yml/badge.svg?branch=master)](https://github.com/succinctlabs/kzg-rs/actions/workflows/rust.yml)
 
 An endpoint for `verify_kzg_proof` in [c-kzg-4844](https://github.com/ethereum/c-kzg-4844) using [bls12_381](https://github.com/zkcrypto/bls12_381/). Passes all of the `verify_kzg_proof` tests in [c-kzg-4844/verify_kzg_proof](https://github.com/ethereum/c-kzg-4844/tree/main/tests/verify_kzg_proof/kzg-mainnet).
 
@@ -11,7 +11,7 @@ An endpoint for `verify_kzg_proof` in [c-kzg-4844](https://github.com/ethereum/c
 | Compute challenge                      | 57,341,532  |
 | Verify KZG proof                       | 9,390,640   |
 
-This crate has been used in a [fork of SP1's patch of `revm`](https://github.com/0xWOLAND/revm/tree/patch-v5.0.0), which passes all tests.  `kzg-rs` is based on [this](https://github.com/sp1-patches/bls12_381/tree/patch-v0.8.0) slightly modified fork of `bls12_381`. This crate works in `[no_std]` mode.
+This crate has been used in a [fork of SP1's patch of `revm`](https://github.com/succinctlabs/revm/tree/patch-v5.0.0), which passes all tests.  `kzg-rs` is based on [this](https://github.com/sp1-patches/bls12_381/tree/patch-v0.8.0) slightly modified fork of `bls12_381`. This crate works in `[no_std]` mode.
 
 ## Usage
 ```sh
