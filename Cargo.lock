@@ -175,7 +175,7 @@ dependencies = [
 [[package]]
 name = "bls12_381"
 version = "0.8.0"
-source = "git+https://github.com/sp1-patches/bls12_381?branch=fakedev9999%2Fsp1-6.0.0-rc.1#950918f7fd3616a86a762e9f5d564003c6d5e9e7"
+source = "git+https://github.com/sp1-patches/bls12_381?tag=patch-0.8.0-sp1-6.0.0#49db1a4c27a44ef7c18e2ef448a12128972e449d"
 dependencies = [
  "cfg-if",
  "ff 0.13.1",
