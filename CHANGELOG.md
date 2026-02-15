@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.8](https://github.com/succinctlabs/kzg-rs/compare/v0.2.7...v0.2.8) - 2026-02-15
+
+### Other
+
+- update bls12_381 branch to fakedev9999/sp1-6.0.0
+- create branch for SP1 v6.0.0 compatibility
+- update bls12_381 to sp1-6.0.0-rc.1 branch
+- update bls12_381 to sp1-6.0.0-beta.1 branch
+- point to bls 6.0.0 patch
+
 ## [0.2.7](https://github.com/succinctlabs/kzg-rs/compare/v0.2.6...v0.2.7) - 2025-05-30
 
 ### Other
