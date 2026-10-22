@@ -6,13 +6,13 @@ pub mod consts;
 pub mod dtypes;
 pub mod enums;
 pub mod kzg_proof;
-pub mod pairings;
+mod pairings;
 pub mod trusted_setup;
 
 pub use consts::*;
 pub use dtypes::*;
 pub use kzg_proof::KzgProof;
-pub use pairings::pairings_verify;
+pub(crate) use pairings::pairings_verify;
 pub use trusted_setup::*;
 
 pub use enums::KzgError;

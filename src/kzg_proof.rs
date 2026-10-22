@@ -200,7 +200,7 @@ pub fn batch_inversion(
     Ok(())
 }
 
-pub fn verify_kzg_proof_impl(
+fn verify_kzg_proof_impl(
     commitment: G1Affine,
     z: Scalar,
     y: Scalar,
@@ -222,10 +222,19 @@ pub fn verify_kzg_proof_impl(
     ))
 }
 
+/// Checks equal batch lengths and curve membership, accepting the identity.
+/// Callers must separately validate prime-order subgroup membership before
+/// KZG verification.
 pub fn validate_batched_input(
     commitment: &[G1Affine],
     proofs: &[G1Affine],
 ) -> Result<(), KzgError> {
+    if commitment.len() != proofs.len() {
+        return Err(KzgError::InvalidBytesLength(
+            "Mismatched batch lengths".to_string(),
+        ));
+    }
+
     // Check if any commitment is invalid (not on curve or identity)
     let invalid_commitment = commitment.iter().any(|commitment| {
         !bool::from(commitment.is_identity()) && !bool::from(commitment.is_on_curve())
@@ -245,7 +254,7 @@ pub fn validate_batched_input(
         return Err(KzgError::BadArgs("Invalid proof".to_string()));
     }
 
-    Ok(()) // Return Ok if all commitments and proofs are valid
+    Ok(())
 }
 
 pub fn compute_challenges_and_evaluate_polynomial(
@@ -408,7 +417,7 @@ impl KzgProof {
         ))
     }
 
-    pub fn verify_kzg_proof_batch(
+    fn verify_kzg_proof_batch(
         commitments: &[G1Affine],
         zs: &[Scalar],
         ys: &[Scalar],
