@@ -157,9 +157,9 @@ pub fn batch_inversion(
     a: &[Scalar],
     len: NonZeroUsize,
 ) -> Result<(), KzgError> {
-    if a == out {
+    if len.get() > a.len() || len.get() > out.len() {
         return Err(KzgError::BadArgs(
-            "Destination is the same as source".to_string(),
+            "Batch inversion length exceeds input or output length".to_string(),
         ));
     }
 
