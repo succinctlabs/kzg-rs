@@ -1,35 +1,43 @@
-use crate::{enums::KzgError, NUM_G1_POINTS, NUM_ROOTS_OF_UNITY};
+use crate::{enums::KzgError, NUM_G1_POINTS, NUM_G2_POINTS, NUM_ROOTS_OF_UNITY};
 
-use alloc::sync::Arc;
+use alloc::{sync::Arc, vec::Vec};
 use bls12_381::{G1Affine, G2Affine, Scalar};
-use core::{
-    hash::{Hash, Hasher},
-    mem::transmute,
-    slice,
-};
+use core::hash::{Hash, Hasher};
 use spin::Once;
 
 pub fn get_roots_of_unity() -> &'static [Scalar] {
-    static ROOTS_OF_UNITY: Once<&'static [Scalar]> = Once::new();
+    static ROOTS_OF_UNITY: Once<Vec<Scalar>> = Once::new();
     ROOTS_OF_UNITY.call_once(|| {
-        let bytes = include_bytes!(concat!(env!("OUT_DIR"), "/roots_of_unity.bin"));
-        unsafe { transmute(slice::from_raw_parts(bytes.as_ptr(), NUM_ROOTS_OF_UNITY)) }
+        let bytes: &[u8; NUM_ROOTS_OF_UNITY * 32] =
+            include_bytes!(concat!(env!("OUT_DIR"), "/roots_of_unity.bin"));
+        bytes
+            .chunks_exact(32)
+            .map(|bytes| Scalar::from_bytes(bytes.try_into().unwrap()).unwrap())
+            .collect()
     })
 }
 
+// The embedded points are generated from the trusted setup by build.rs, so
+// uncompressed decoding can skip curve and subgroup checks.
 pub fn get_g1_points() -> &'static [G1Affine] {
-    static G1_POINTS: Once<&'static [G1Affine]> = Once::new();
+    static G1_POINTS: Once<Vec<G1Affine>> = Once::new();
     G1_POINTS.call_once(|| {
-        let bytes = include_bytes!(concat!(env!("OUT_DIR"), "/g1.bin"));
-        unsafe { transmute(slice::from_raw_parts(bytes.as_ptr(), NUM_G1_POINTS)) }
+        let bytes: &[u8; NUM_G1_POINTS * 96] = include_bytes!(concat!(env!("OUT_DIR"), "/g1.bin"));
+        bytes
+            .chunks_exact(96)
+            .map(|bytes| G1Affine::from_uncompressed_unchecked(bytes.try_into().unwrap()).unwrap())
+            .collect()
     })
 }
 
 pub fn get_g2_points() -> &'static [G2Affine] {
-    static G2_POINTS: Once<&'static [G2Affine]> = Once::new();
+    static G2_POINTS: Once<Vec<G2Affine>> = Once::new();
     G2_POINTS.call_once(|| {
-        let bytes = include_bytes!(concat!(env!("OUT_DIR"), "/g2.bin"));
-        unsafe { transmute(slice::from_raw_parts(bytes.as_ptr(), NUM_G1_POINTS)) }
+        let bytes: &[u8; NUM_G2_POINTS * 192] = include_bytes!(concat!(env!("OUT_DIR"), "/g2.bin"));
+        bytes
+            .chunks_exact(192)
+            .map(|bytes| G2Affine::from_uncompressed_unchecked(bytes.try_into().unwrap()).unwrap())
+            .collect()
     })
 }
 

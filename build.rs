@@ -193,16 +193,15 @@ fn main() {
     let mut g2_bytes: Vec<u8> = Vec::new();
 
     roots_of_unity.iter().for_each(|&v| {
-        roots_of_unity_bytes
-            .extend_from_slice(unsafe { &std::mem::transmute::<Scalar, [u8; 32]>(v) });
+        roots_of_unity_bytes.extend_from_slice(&v.to_bytes());
     });
 
     g1_points.iter().for_each(|&v| {
-        g1_bytes.extend_from_slice(unsafe { &std::mem::transmute::<G1Affine, [u8; 104]>(v) });
+        g1_bytes.extend_from_slice(&v.to_uncompressed());
     });
 
     g2_points.iter().for_each(|&v| {
-        g2_bytes.extend_from_slice(unsafe { &std::mem::transmute::<G2Affine, [u8; 200]>(v) });
+        g2_bytes.extend_from_slice(&v.to_uncompressed());
     });
 
     let mut roots_of_unity_file = fs::OpenOptions::new()

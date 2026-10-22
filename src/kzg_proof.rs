@@ -253,6 +253,12 @@ pub fn compute_challenges_and_evaluate_polynomial(
     commitment: &[G1Affine],
     kzg_settings: &KzgSettings,
 ) -> Result<(Vec<Scalar>, Vec<Scalar>), KzgError> {
+    if blobs.len() != commitment.len() {
+        return Err(KzgError::InvalidBytesLength(
+            "Invalid commitments length".to_string(),
+        ));
+    }
+
     // Initialize vectors to store evaluation challenges and polynomial evaluations
     let mut evaluation_challenges = Vec::with_capacity(blobs.len());
     let mut ys = Vec::with_capacity(blobs.len());
@@ -295,6 +301,12 @@ pub fn compute_r_powers(
     proofs: &[G1Affine],
 ) -> Result<Vec<Scalar>, KzgError> {
     let n = commitment.len();
+    if zs.len() != n || ys.len() != n || proofs.len() != n {
+        return Err(KzgError::InvalidBytesLength(
+            "Mismatched batch lengths".to_string(),
+        ));
+    }
+
     let input_size =
         32 + n * (BYTES_PER_COMMITMENT + 2 * BYTES_PER_FIELD_ELEMENT + BYTES_PER_PROOF);
 
@@ -305,9 +317,7 @@ pub fn compute_r_powers(
 
     bytes[16..24].copy_from_slice(&(NUM_FIELD_ELEMENTS_PER_BLOB as u64).to_be_bytes());
 
-    let mut n_bytes = n.to_be_bytes().to_vec();
-    n_bytes.resize(8, 0);
-    bytes[24..32].copy_from_slice(&n_bytes);
+    bytes[24..32].copy_from_slice(&(n as u64).to_be_bytes());
 
     let mut offset = 32;
 
@@ -317,13 +327,15 @@ pub fn compute_r_powers(
         bytes[offset..(v.len() + offset)].copy_from_slice(&v[..]);
         offset += BYTES_PER_COMMITMENT;
 
-        // Copy evaluation challenge
-        let v = zs[i].to_bytes();
+        // Copy evaluation challenge (big-endian)
+        let mut v = zs[i].to_bytes();
+        v.reverse();
         bytes[offset..(v.len() + offset)].copy_from_slice(&v[..]);
         offset += BYTES_PER_FIELD_ELEMENT;
 
-        // Copy polynomial's evaluation value
-        let v = ys[i].to_bytes();
+        // Copy polynomial's evaluation value (big-endian)
+        let mut v = ys[i].to_bytes();
+        v.reverse();
         bytes[offset..(v.len() + offset)].copy_from_slice(&v[..]);
         offset += BYTES_PER_FIELD_ELEMENT;
 
@@ -405,12 +417,12 @@ impl KzgProof {
     ) -> Result<bool, KzgError> {
         let n = commitments.len();
 
+        // Validate lengths and compute r powers before processing the batch.
+        let r_powers = compute_r_powers(commitments, zs, ys, proofs)?;
+
         // Initialize vectors to store intermediate values
         let mut c_minus_y: Vec<G1Projective> = Vec::with_capacity(n);
         let mut r_times_z: Vec<Scalar> = Vec::with_capacity(n);
-
-        // Compute r powers
-        let r_powers = compute_r_powers(commitments, zs, ys, proofs)?;
 
         // Convert proofs to G1Projective
         let proofs = proofs.iter().map(Into::into).collect::<Vec<_>>();
@@ -475,6 +487,18 @@ impl KzgProof {
         proofs_bytes: Vec<Bytes48>,
         kzg_settings: &KzgSettings,
     ) -> Result<bool, KzgError> {
+        if blobs.len() != commitments_bytes.len() {
+            return Err(KzgError::InvalidBytesLength(
+                "Invalid commitments length".to_string(),
+            ));
+        }
+
+        if blobs.len() != proofs_bytes.len() {
+            return Err(KzgError::InvalidBytesLength(
+                "Invalid proofs length".to_string(),
+            ));
+        }
+
         if blobs.is_empty() {
             return Ok(true);
         }
@@ -486,18 +510,6 @@ impl KzgProof {
                 &proofs_bytes[0],
                 kzg_settings,
             );
-        }
-
-        if blobs.len() != commitments_bytes.len() {
-            return Err(KzgError::InvalidBytesLength(
-                "Invalid commitments length".to_string(),
-            ));
-        }
-
-        if blobs.len() != proofs_bytes.len() {
-            return Err(KzgError::InvalidBytesLength(
-                "Invalid proofs length".to_string(),
-            ));
         }
 
         let commitments = commitments_bytes
